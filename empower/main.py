@@ -258,6 +258,9 @@ def _setup_logging():
     logging.getLogger().addHandler(log_handler)
     logging.getLogger().setLevel(logging.INFO)
 
+    access_log = logging.getLogger("tornado.access")
+    access_log.setLevel(logging.ERROR);
+
     if _OPTIONS.log_config:
 
         if not os.path.exists(_OPTIONS.log_config):
