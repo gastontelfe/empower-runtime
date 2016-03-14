@@ -37,18 +37,18 @@ import empower.logger
 LOG = empower.logger.get_logger()
 
 # TODO: This should be automatically built. Update if topology is different.
-CPPS = {
-        EtherAddress("00:00:24:d1:61:ed"): {
-            EtherAddress("00:0D:B9:2F:56:58"): 2,
-            EtherAddress("00:0D:B9:2F:56:5c"): 3,
-            EtherAddress("00:0D:B9:2F:56:64"): 1,
-        },
-        EtherAddress("00:00:24:D1:83:55"): {
-            EtherAddress("00:0D:B9:2F:56:58"): 2,
-            EtherAddress("00:0D:B9:2F:56:5c"): 2,
-            EtherAddress("00:0D:B9:2F:56:64"): 3,
-        },
-    }
+# CPPS = {
+#         EtherAddress("00:00:24:d1:61:ed"): {
+#             EtherAddress("00:0D:B9:2F:56:58"): 2,
+#             EtherAddress("00:0D:B9:2F:56:5c"): 3,
+#             EtherAddress("00:0D:B9:2F:56:64"): 1,
+#         },
+#         EtherAddress("00:00:24:D1:83:55"): {
+#             EtherAddress("00:0D:B9:2F:56:58"): 2,
+#             EtherAddress("00:0D:B9:2F:56:5c"): 2,
+#             EtherAddress("00:0D:B9:2F:56:64"): 3,
+#         },
+#     }
 
 
 class RyuFlowEntry():

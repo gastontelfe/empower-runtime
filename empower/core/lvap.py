@@ -188,8 +188,8 @@ class LVAP(object):
         ryu = RyuFlowEntry()
 
         ryu.add_station_flows(self.addr,
-                              self.wtp.addr,
-                              self.ports[0].ovs_port_id)
+                             self.wtp.addr,
+                             self.ports[0].ovs_port_id)
 
     def clear_tables(self):
         """Clear openflow tables."""

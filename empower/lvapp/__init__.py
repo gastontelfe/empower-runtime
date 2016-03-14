@@ -81,6 +81,7 @@ HELLO = Struct("hello", UBInt8("version"),
 SET_CHANNEL = Struct("set_channel", UBInt8("version"),
                         UBInt8("type"),
                         UBInt16("length"),
+                        UBInt8("channel"),
                         UBInt32("seq"))
 
 PROBE_REQUEST = Struct("probe_request", UBInt8("version"),

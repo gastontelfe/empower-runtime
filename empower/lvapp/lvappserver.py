@@ -122,7 +122,7 @@ class LVAPPServer(PNFPServer, TCPServer):
     def set_channel(self,channel):
         """ LLAMA AL SET_CHANNEL. """
 
-        self.connection.set_channel(channel);
+        self.connection.send_set_channel(channel);
 
 
     def add_allowed(self, sta_addr):

@@ -58,6 +58,8 @@ from empower.lvapp import PT_DEL_LVAP
 from empower.lvapp import DEL_LVAP
 from empower.lvapp import PT_PROBE_RESPONSE
 from empower.lvapp import PROBE_RESPONSE
+from empower.lvapp import PT_SET_CHANNEL
+from empower.lvapp import SET_CHANNEL
 from empower.core.lvap import LVAP
 from empower.core.networkport import NetworkPort
 
@@ -796,11 +798,11 @@ class LVAPPConnection(object):
 
         response = Container(version=PT_VERSION,
                              type=PT_SET_CHANNEL,
-                             length=14,
-                             seq=self.wtp.seq,
-                             sta=lvap.addr.to_raw())
+                             length=9,
+                             channel=channel,
+                             seq=self.wtp.seq)
 
-        LOG.info("ESTE LVAP SABEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE %s Y EL WTP TAMBIEN %s" % (lvap.addr, self.wtp.addr))
+        LOG.info("EL WTP TAMBIEN %s" % (self.wtp.addr))
         msg = SET_CHANNEL.build(response)
         self.stream.write(msg)
 

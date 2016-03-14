@@ -36,6 +36,8 @@ from empower.events.cppdown import cppdown
 from empower.events.lvapjoin import lvapjoin
 from empower.events.lvapleave import lvapleave
 
+from empower.lvapp.lvappserver import LVAPPServer
+from empower.main import RUNTIME
 
 import empower.logger
 LOG = empower.logger.get_logger()
@@ -51,11 +53,11 @@ class PruebaApp(EmpowerApp):
 
     """
 
-    def __init__(self, tenant_id, period,server):
+    def __init__(self, tenant_id, period, server):
 
         super().__init__(tenant_id, period)
 
-        _server=server
+        self._server=server
         wtpup(tenant_id=self.tenant.tenant_id,
               callback=self.wtp_up_callback)
 
@@ -64,7 +66,7 @@ class PruebaApp(EmpowerApp):
 
         LOG.info("WTP %s SABEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE!" % wtp.addr)
 
-        server.set_channel(11)
+        self._server.set_channel(11)
 
 
 def launch(tenant, period=DEFAULT_PERIOD):
