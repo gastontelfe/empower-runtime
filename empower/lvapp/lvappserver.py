@@ -119,6 +119,12 @@ class LVAPPServer(PNFPServer, TCPServer):
                 raise ValueError(deny.addr_str)
             self.denied.append(deny.addr)
 
+    def set_channel(self,channel):
+        """ LLAMA AL SET_CHANNEL. """
+
+        self.connection.set_channel(channel);
+
+
     def add_allowed(self, sta_addr):
         """ Add entry to ACL. """
 

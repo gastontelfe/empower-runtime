@@ -784,6 +784,26 @@ class LVAPPConnection(object):
         msg = PROBE_RESPONSE.build(response)
         self.stream.write(msg)
 
+    def send_set_channel(self, channel):
+        """Send a SET_CHANNEL message.
+        Args:
+            channel: int channel
+        Returns:
+            None
+        Raises:
+            TypeError: if lvap is not an LVAP object.
+        """
+
+        response = Container(version=PT_VERSION,
+                             type=PT_SET_CHANNEL,
+                             length=14,
+                             seq=self.wtp.seq,
+                             sta=lvap.addr.to_raw())
+
+        LOG.info("ESTE LVAP SABEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE %s Y EL WTP TAMBIEN %s" % (lvap.addr, self.wtp.addr))
+        msg = SET_CHANNEL.build(response)
+        self.stream.write(msg)
+
     def send_del_lvap(self, lvap):
         """Send a DEL_LVAP message.
         Args:

@@ -76,6 +76,11 @@ HELLO = Struct("hello", UBInt8("version"),
                UBInt32("downlink_bytes"),
                Bytes("ssid", lambda ctx: ctx.length - 26))
 
+SET_CHANNEL = Struct("set_channel", UBInt8("version"),
+                        UBInt8("type"),
+                        UBInt16("length"),
+                        UBInt32("seq"))
+
 PROBE_REQUEST = Struct("probe_request", UBInt8("version"),
                        UBInt8("type"),
                        UBInt16("length"),
@@ -214,6 +219,7 @@ PT_TYPES = {PT_BYE: None,
             PT_LVAP_JOIN: None,
             PT_LVAP_LEAVE: None,
             PT_HELLO: HELLO,
+            PT_SET_CHANNEL: SET_CHANNEL,
             PT_PROBE_REQUEST: PROBE_REQUEST,
             PT_PROBE_RESPONSE: PROBE_RESPONSE,
             PT_AUTH_REQUEST: AUTH_REQUEST,
