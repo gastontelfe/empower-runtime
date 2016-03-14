@@ -61,6 +61,8 @@ PT_STATUS_PORT = 0x14
 PT_CAPS_REQUEST = 0x15
 PT_CAPS_RESPONSE = 0x16
 
+PT_SET_CHANNEL = 0x31
+
 HEADER = Struct("header", UBInt8("version"), UBInt8("type"), UBInt16("length"))
 
 SSIDS = Range(1, 10, Struct("ssids", UBInt8("length"),
