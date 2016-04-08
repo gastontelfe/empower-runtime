@@ -107,6 +107,10 @@ class LVAPPServer(PNFPServer, TCPServer):
         sta = str(sta_mac).split(":")[3:6]
         return EtherAddress(":".join(base + sta))
 
+    def set_channel(self, channel):
+        """ LLAMA AL SET_CHANNEL. """
+        self.connection.send_set_channel(channel);
+
 
 def launch(port=DEFAULT_PORT):
     """Start LVAPP Server Module."""

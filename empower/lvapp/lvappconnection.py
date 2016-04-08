@@ -65,10 +65,13 @@ from empower.lvapp import PT_ADD_VAP
 from empower.lvapp import ADD_VAP
 from empower.core.tenant import T_TYPE_SHARED
 from empower.core.tenant import T_TYPE_UNIQUE
+from empower.lvapp import PT_SET_CHANNEL
+from empower.lvapp import SET_CHANNEL
 
 from empower.main import RUNTIME
 
 import empower.logger
+import pdb
 LOG = empower.logger.get_logger()
 
 BASE_MAC = EtherAddress("00:1b:b3:00:00:00")
@@ -899,6 +902,44 @@ class LVAPPConnection(object):
 
         msg = PROBE_RESPONSE.build(response)
         self.stream.write(msg)
+
+
+    def send_set_channel(self, channel):
+        """Send a SET_CHANNEL message.
+        Args:
+            channel: int channel
+        Returns:
+            None
+        Raises:
+            TypeError: if lvap is not an LVAP object.
+        """
+
+        response = Container(version=PT_VERSION,
+                             type=PT_SET_CHANNEL,
+                             length=11,
+                             seq=self.wtp.seq,
+                             channel=channel)
+
+        LOG.info("EL WTP TAMBIEN %s" % (self.wtp.addr))
+        msg = SET_CHANNEL.build(response)
+        self.stream.write(msg)
+
+        # pdb.set_trace()
+        LOG.info("Borrando LVAPs: %s" % self.wtp.addr)
+
+        # remove hosted LVAPs
+        to_be_removed = []
+        for lvap in RUNTIME.lvaps.values():
+            if lvap.wtp == self.wtp:
+                to_be_removed.append(lvap)
+
+        for lvap in to_be_removed:
+            LOG.info("LVAP LEAVE %s (%s)", lvap.addr, lvap.ssid)
+            for handler in self.server.pt_types_handlers[PT_LVAP_LEAVE]:
+                handler(lvap)
+            LOG.info("Deleting LVAP: %s", lvap.addr)
+            lvap.clear_ports()
+            del RUNTIME.lvaps[lvap.addr]
 
     def send_del_lvap(self, lvap):
         """Send a DEL_LVAP message.

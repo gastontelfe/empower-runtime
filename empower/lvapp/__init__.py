@@ -63,6 +63,7 @@ PT_CAPS_RESPONSE = 0x16
 PT_ADD_VAP = 0x31
 PT_DEL_VAP = 0x32
 PT_STATUS_VAP = 0x33
+PT_SET_CHANNEL = 0x34
 
 HEADER = Struct("header", UBInt8("version"), UBInt8("type"), UBInt16("length"))
 
@@ -77,6 +78,12 @@ HELLO = Struct("hello", UBInt8("version"),
                Bytes("wtp", 6),
                UBInt32("uplink_bytes"),
                UBInt32("downlink_bytes"))
+
+SET_CHANNEL = Struct("set_channel", UBInt8("version"),
+                        UBInt8("type"),
+                        UBInt16("length"),
+                        UBInt32("seq"),
+                        UBInt8("channel"))
 
 PROBE_REQUEST = Struct("probe_request", UBInt8("version"),
                        UBInt8("type"),
@@ -248,7 +255,8 @@ PT_TYPES = {PT_BYE: None,
             PT_CAPS_RESPONSE: CAPS_RESPONSE,
             PT_SET_PORT: SET_PORT,
             PT_STATUS_PORT: STATUS_PORT,
-            PT_STATUS_VAP: STATUS_VAP}
+            PT_STATUS_VAP: STATUS_VAP,
+            PT_SET_CHANNEL: SET_CHANNEL,}
 
 PT_TYPES_HANDLERS = {PT_BYE: [],
                      PT_REGISTER: [],

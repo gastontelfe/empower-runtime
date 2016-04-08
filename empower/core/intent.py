@@ -29,6 +29,7 @@
 
 import json
 import http.client
+import pdb
 
 from uuid import UUID
 
@@ -74,7 +75,8 @@ def add_intent(intent):
     body = json.dumps(intent, indent=4, cls=EmpowerEncoder)
 
     LOG.info("POST: %s\n%s", "/empower/vnfrule/", body)
-
+    #pdb.set_trace()
+    
     headers = {
         'Content-type': 'application/json',
         'Accept': 'application/json',
