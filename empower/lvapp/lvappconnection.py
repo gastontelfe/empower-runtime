@@ -661,7 +661,7 @@ class LVAPPConnection(object):
         Returns:
             None
         """
-
+        #pdb.set_trace()
         wtp_addr = EtherAddress(caps.wtp)
 
         try:
@@ -670,9 +670,11 @@ class LVAPPConnection(object):
             LOG.info("Caps response from unknown WTP (%s)", (wtp_addr))
             return
 
+        #wtp.supports = ResourcePool()
+
         LOG.info("Received caps response from %s",
                  EtherAddress(caps.wtp))
-
+        
         for block in caps.blocks:
 
             r_block = ResourceBlock(wtp, block[0], block[1])
@@ -719,6 +721,75 @@ class LVAPPConnection(object):
                 self.send_add_vap(vap)
                 RUNTIME.tenants[tenant_id].vaps[net_bssid] = vap
                 break
+
+
+    def _handle_set_channel_response(self, chan):
+        """Handle an incoming SET_CHANNEL_RESPONSE message.
+        Args:
+            chan, a SET_CHANNEL_RESPONSE message
+        Returns:
+            None
+        """
+        #pdb.set_trace()
+        wtp_addr = EtherAddress(chan.wtp)
+
+        try:
+            wtp = RUNTIME.wtps[wtp_addr]
+        except KeyError:
+            LOG.info("Channnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn response from unknown WTP (%s)", (wtp_addr))
+            return
+
+        wtp.supports = ResourcePool()
+
+        LOG.info("Received channnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn response from %s",
+                 EtherAddress(chan.wtp))
+        
+        for block in chan.blocks:
+            
+            r_block = ResourceBlock(wtp, block[0], block[1])
+            wtp.supports.add(r_block)
+
+        for port in chan.ports:
+
+            iface = port[2].decode("utf-8").strip('\0')
+
+            network_port = NetworkPort(dpid=wtp.addr,
+                                       hwaddr=EtherAddress(port[0]),
+                                       port_id=int(port[1]),
+                                       iface=iface)
+
+            wtp.ports[network_port.port_id] = network_port
+
+        # Upon connection to the controller, the WTP must be provided
+        # with the list of shared VAP
+
+        for tenant in RUNTIME.tenants.values():
+
+            # tenant does not use shared VAPs
+            if tenant.bssid_type == T_TYPE_UNIQUE:
+                continue
+
+            # wtp not in this tenant
+            if wtp_addr not in tenant.wtps:
+                continue
+
+            tenant_id = tenant.tenant_id
+            tokens = [tenant_id.hex[0:12][i:i+2] for i in range(0, 12, 2)]
+            base_bssid = EtherAddress(':'.join(tokens))
+
+            for block in wtp.supports:
+
+                net_bssid = self.server.generate_bssid(base_bssid, wtp_addr)
+
+                # vap has already been created
+                if net_bssid in RUNTIME.tenants[tenant_id].vaps:
+                    continue
+
+                vap = VAP(net_bssid, block, wtp, tenant)
+
+                self.send_add_vap(vap)
+                RUNTIME.tenants[tenant_id].vaps[net_bssid] = vap
+                break                
 
     def _handle_interference_map(self, interference_map):
         """Handle an incoming INTERFERENCE_MAP message.
