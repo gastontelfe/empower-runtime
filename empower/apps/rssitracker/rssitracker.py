@@ -34,8 +34,8 @@ from empower.maps.ucqm import ucqm
 from empower.maps.ncqm import ncqm
 from empower.events.wtpup import wtpup
 
-DEFAULT_ADDRESS = "ff:ff:ff:ff:ff:ff"
-
+#DEFAULT_ADDRESS = "ff:ff:ff:ff:ff:ff"
+DEFAULT_ADDRESS = "CC:5D:4E:89:1A:00"
 
 class RSSITracker(EmpowerApp):
     """Application implementing an rssi tracker.
@@ -73,9 +73,9 @@ class RSSITracker(EmpowerApp):
         """Called when a new WTP connects to the controller."""
 
         for block in wtp.supports:
-
-            if block.black_listed:
-                continue
+            """Se cambio"""
+            #if block.black_listed:
+            #    continue
 
             ucqm(addrs=self.addrs,
                  block=block,

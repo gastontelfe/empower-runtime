@@ -64,6 +64,7 @@ PT_ADD_VAP = 0x31
 PT_DEL_VAP = 0x32
 PT_STATUS_VAP = 0x33
 PT_SET_CHANNEL = 0x34
+PT_CHANNEL_RESPONSE = 0x35
 
 HEADER = Struct("header", UBInt8("version"), UBInt8("type"), UBInt16("length"))
 
@@ -193,6 +194,16 @@ CAPS_RESPONSE = Struct("caps_response", UBInt8("version"),
                        Array(lambda ctx: ctx.nb_resources_elements, CAPS_R),
                        Array(lambda ctx: ctx.nb_ports_elements, CAPS_P))
 
+CHANNEL_RESPONSE = Struct("channel_response", UBInt8("version"),
+                       UBInt8("type"),
+                       UBInt16("length"),
+                       UBInt32("seq"),
+                       Bytes("wtp", 6),
+                       UBInt8("nb_resources_elements"),
+                       UBInt8("nb_ports_elements"),
+                       Array(lambda ctx: ctx.nb_resources_elements, CAPS_R),
+                       Array(lambda ctx: ctx.nb_ports_elements, CAPS_P))
+
 SET_PORT = Struct("set_port", UBInt8("version"),
                   UBInt8("type"),
                   UBInt16("length"),
@@ -256,7 +267,8 @@ PT_TYPES = {PT_BYE: None,
             PT_SET_PORT: SET_PORT,
             PT_STATUS_PORT: STATUS_PORT,
             PT_STATUS_VAP: STATUS_VAP,
-            PT_SET_CHANNEL: SET_CHANNEL,}
+            PT_SET_CHANNEL: SET_CHANNEL,
+            PT_CHANNEL_RESPONSE: CHANNEL_RESPONSE}
 
 PT_TYPES_HANDLERS = {PT_BYE: [],
                      PT_REGISTER: [],
@@ -276,4 +288,5 @@ PT_TYPES_HANDLERS = {PT_BYE: [],
                      PT_CAPS_RESPONSE: [],
                      PT_SET_PORT: [],
                      PT_STATUS_PORT: [],
-                     PT_STATUS_VAP: []}
+                     PT_STATUS_VAP: [],
+                     PT_CHANNEL_RESPONSE: []}

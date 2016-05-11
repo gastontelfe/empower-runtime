@@ -723,10 +723,10 @@ class LVAPPConnection(object):
                 break
 
 
-    def _handle_set_channel_response(self, chan):
-        """Handle an incoming SET_CHANNEL_RESPONSE message.
+    def _handle_channel_response(self, chan):
+        """Handle an incoming CHANNEL_RESPONSE message.
         Args:
-            chan, a SET_CHANNEL_RESPONSE message
+            chan, a CHANNEL_RESPONSE message
         Returns:
             None
         """
@@ -736,12 +736,12 @@ class LVAPPConnection(object):
         try:
             wtp = RUNTIME.wtps[wtp_addr]
         except KeyError:
-            LOG.info("Channnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn response from unknown WTP (%s)", (wtp_addr))
+            LOG.info("CAMBIO DE CANAL response from unknown WTP (%s)", (wtp_addr))
             return
 
         wtp.supports = ResourcePool()
 
-        LOG.info("Received channnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn response from %s",
+        LOG.info("Received CAMBIO DE CANAL response from %s",
                  EtherAddress(chan.wtp))
         
         for block in chan.blocks:
