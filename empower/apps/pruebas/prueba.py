@@ -40,6 +40,7 @@ from empower.main import RUNTIME
 
 
 import empower.logger
+import threading
 LOG = empower.logger.get_logger()
 
 
@@ -48,25 +49,38 @@ class PruebaApp(EmpowerApp):
 
     Example:
 
-        ID="640a1560-d3ac-42c8-ba5d-ef4cea0136d9"
-        ./empower-runtime.py apps.pruebas.prueba:640a1560-d3ac-42c8-ba5d-ef4cea0136d9
+        ID="3b678156-477f-4b54-84ff-aa80699eb984"
+        ./empower-runtime.py apps.pruebas.prueba:3b678156-477f-4b54-84ff-aa80699eb984
 
     """
 
     def __init__(self, tenant_id, period,server):
 
-        EmpowerApp.__init__(self, tenant_id)
+        EmpowerApp.__init__(self, tenant_id)        
 
         self._server=server
+        self.i = 0
         wtpup(tenant_id=self.tenant.tenant_id,
               callback=self.wtp_up_callback)
 
     def wtp_up_callback(self, wtp):
-        """Called when a new wtp connects to the controller."""
+        """Called when a new wtp connects to the controller."""        
+        # LOG.info("WTP %s up!" % wtp.addr)
+        # wtp.connection.send_set_channel(6)
+        # self._server.set_channel(6)
+        # wtp.connection.send_scan_request()
+        # print("--------test timer %s -------", self.i)
+        # self.test()
+        print ("WTP UUUUUUUUUUUP")
 
-        LOG.info("WTP %s up!" % wtp.addr)
-        wtp.connection.send_set_channel(6)
-        #self._server.set_channel(6)
+    def loop(self):
+        self.i += 1
+        print("--------test timer %s -------" % self.i)
+
+    # def test(self):
+    #     self.i += 1
+    #     print("--------test timer %s -------", self.i)
+    #     threading.Timer(4, self.test).start()
 
 
 def launch(tenant, period=DEFAULT_PERIOD):

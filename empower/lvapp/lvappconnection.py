@@ -67,6 +67,10 @@ from empower.core.tenant import T_TYPE_SHARED
 from empower.core.tenant import T_TYPE_UNIQUE
 from empower.lvapp import PT_SET_CHANNEL
 from empower.lvapp import SET_CHANNEL
+from empower.lvapp import PT_SCAN_REQUEST
+from empower.lvapp import SCAN_REQUEST
+from empower.lvapp import PT_SCAN_RESPONSE
+from empower.lvapp import SCAN_RESPONSE
 
 from empower.main import RUNTIME
 
@@ -789,7 +793,14 @@ class LVAPPConnection(object):
 
                 self.send_add_vap(vap)
                 RUNTIME.tenants[tenant_id].vaps[net_bssid] = vap
-                break                
+                break         
+
+    def _handle_scan_response(self, scan):
+        """Handle an incoming scan_response message.
+        
+        """
+        LOG.info("SCAN_REPONSE received")
+        LOG.info(scan.scan)    
 
     def _handle_interference_map(self, interference_map):
         """Handle an incoming INTERFERENCE_MAP message.
@@ -1004,6 +1015,8 @@ class LVAPPConnection(object):
             if lvap.wtp == self.wtp:
                 to_be_removed.append(lvap)
 
+        LOG.info("SEND SET CHANNEL")
+        
         for lvap in to_be_removed:
             LOG.info("LVAP LEAVE %s (%s)", lvap.addr, lvap.ssid)
             for handler in self.server.pt_types_handlers[PT_LVAP_LEAVE]:
@@ -1011,6 +1024,20 @@ class LVAPPConnection(object):
             LOG.info("Deleting LVAP: %s", lvap.addr)
             lvap.clear_ports()
             del RUNTIME.lvaps[lvap.addr]
+
+    def send_scan_request(self):
+        """
+            Send a SCAN_REQUEST message.
+        """
+
+        response = Container(version=PT_VERSION,
+                             type=PT_SCAN_REQUEST,
+                             length=10,
+                             seq=self.wtp.seq)
+
+        LOG.info("SCAN REQUEST %s" % (self.wtp.addr))
+        msg = SCAN_REQUEST.build(response)
+        self.stream.write(msg)
 
     def send_del_lvap(self, lvap):
         """Send a DEL_LVAP message.

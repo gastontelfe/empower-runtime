@@ -65,6 +65,8 @@ PT_DEL_VAP = 0x32
 PT_STATUS_VAP = 0x33
 PT_SET_CHANNEL = 0x34
 PT_CHANNEL_RESPONSE = 0x35
+PT_SCAN_REQUEST = 0x36
+PT_SCAN_RESPONSE = 0x37
 
 HEADER = Struct("header", UBInt8("version"), UBInt8("type"), UBInt16("length"))
 
@@ -85,6 +87,11 @@ SET_CHANNEL = Struct("set_channel", UBInt8("version"),
                         UBInt16("length"),
                         UBInt32("seq"),
                         UBInt8("channel"))
+
+SCAN_REQUEST = Struct("scan_request", UBInt8("version"),
+                        UBInt8("type"),
+                        UBInt16("length"),
+                        UBInt32("seq"))
 
 PROBE_REQUEST = Struct("probe_request", UBInt8("version"),
                        UBInt8("type"),
@@ -204,6 +211,12 @@ CHANNEL_RESPONSE = Struct("channel_response", UBInt8("version"),
                        Array(lambda ctx: ctx.nb_resources_elements, CAPS_R),
                        Array(lambda ctx: ctx.nb_ports_elements, CAPS_P))
 
+SCAN_RESPONSE = Struct("scan_response", UBInt8("version"),
+                       UBInt8("type"),
+                       UBInt16("length"),
+                       UBInt32("seq"),
+                       Bytes("scan", lambda ctx: ctx.length - 10))
+
 SET_PORT = Struct("set_port", UBInt8("version"),
                   UBInt8("type"),
                   UBInt16("length"),
@@ -268,7 +281,10 @@ PT_TYPES = {PT_BYE: None,
             PT_STATUS_PORT: STATUS_PORT,
             PT_STATUS_VAP: STATUS_VAP,
             PT_SET_CHANNEL: SET_CHANNEL,
-            PT_CHANNEL_RESPONSE: CHANNEL_RESPONSE}
+            PT_CHANNEL_RESPONSE: CHANNEL_RESPONSE,
+            PT_SCAN_REQUEST: SCAN_REQUEST,
+            PT_SCAN_RESPONSE: SCAN_RESPONSE,
+            }
 
 PT_TYPES_HANDLERS = {PT_BYE: [],
                      PT_REGISTER: [],
@@ -289,4 +305,6 @@ PT_TYPES_HANDLERS = {PT_BYE: [],
                      PT_SET_PORT: [],
                      PT_STATUS_PORT: [],
                      PT_STATUS_VAP: [],
-                     PT_CHANNEL_RESPONSE: []}
+                     PT_CHANNEL_RESPONSE: [],
+                     PT_SCAN_RESPONSE: [],
+                     }
