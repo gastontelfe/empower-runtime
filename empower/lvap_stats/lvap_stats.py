@@ -36,20 +36,13 @@ from construct import UBInt16
 from construct import UBInt32
 from construct import Array
 
+from empower.core.lvap import LVAP
 from empower.datatypes.etheraddress import EtherAddress
-from empower.core.module import ModuleHandler
-from empower.core.module import ModuleWorker
+from empower.core.module import ModuleLVAPPWorker
 from empower.core.module import Module
-from empower.core.module import bind_module
-from empower.core.module import handle_callback
-from empower.restserver.restserver import RESTServer
-from empower.lvapp.lvappserver import LVAPPServer
 from empower.lvapp import PT_VERSION
 
 from empower.main import RUNTIME
-
-import empower.logger
-LOG = empower.logger.get_logger()
 
 
 PT_RATES_REQUEST = 0x29
@@ -64,27 +57,24 @@ RATES_REQUEST = Struct("rates_request", UBInt8("version"),
                        UBInt8("type"),
                        UBInt16("length"),
                        UBInt32("seq"),
-                       UBInt32("rates_id"),
+                       UBInt32("module_id"),
                        Bytes("sta", 6))
 
 RATES_RESPONSE = Struct("rates_response", UBInt8("version"),
                         UBInt8("type"),
                         UBInt16("length"),
                         UBInt32("seq"),
-                        UBInt32("rates_id"),
+                        UBInt32("module_id"),
                         Bytes("wtp", 6),
                         Bytes("sta", 6),
                         UBInt16("nb_entries"),
                         Array(lambda ctx: ctx.nb_entries, RATES_ENTRY))
 
 
-class LinkStatsHandler(ModuleHandler):
-    pass
-
-
-class LinkStats(Module):
+class LVAPStats(Module):
     """ PacketsCounter object. """
 
+    MODULE_NAME = "lvap_stats"
     REQUIRED = ['module_type', 'worker', 'tenant_id', 'lvap']
 
     # parameters
@@ -95,19 +85,22 @@ class LinkStats(Module):
 
     def __eq__(self, other):
 
-        return super().__eq__(other) and \
-               self.lvap == other.lvap
+        return super().__eq__(other) and self.lvap == other.lvap
 
     @property
     def lvap(self):
+        """Return LVAP."""
+
         return self._lvap
 
     @lvap.setter
     def lvap(self, value):
+        """Set LVAP."""
+
         self._lvap = EtherAddress(value)
 
     def to_dict(self):
-        """ Return a JSON-serializable dictionary representing the Rates """
+        """ Return a JSON-serializable."""
 
         out = super().to_dict()
 
@@ -132,33 +125,20 @@ class LinkStats(Module):
         if not lvap.wtp.connection:
             return
 
-        self.send_rates_request(lvap.wtp, lvap)
-
-    def send_rates_request(self, wtp, lvap):
-        """ Send a RATES_REQUEST message. """
-
         rates_req = Container(version=PT_VERSION,
                               type=PT_RATES_REQUEST,
                               length=18,
-                              seq=wtp.seq,
-                              rates_id=self.module_id,
+                              seq=lvap.wtp.seq,
+                              module_id=self.module_id,
                               sta=lvap.addr.to_raw())
 
-        LOG.info("Sending rates request to %s @ %s (id=%u)",
-                 lvap.addr, wtp.addr, self.module_id)
+        self.log.info("Sending rates request to %s @ %s (id=%u)",
+                      lvap.addr, lvap.wtp.addr, self.module_id)
 
         msg = RATES_REQUEST.build(rates_req)
-        wtp.connection.stream.write(msg)
+        lvap.wtp.connection.stream.write(msg)
 
-
-class LinkStatsWorker(ModuleWorker):
-    """ Counter worker. """
-
-    MODULE_NAME = "link_stats"
-    MODULE_HANDLER = LinkStatsHandler
-    MODULE_TYPE = LinkStats
-
-    def handle_rates_response(self, rates):
+    def handle_response(self, response):
         """Handle an incoming RATES_RESPONSE message.
         Args:
             rates, a RATES_RESPONSE message
@@ -166,34 +146,40 @@ class LinkStatsWorker(ModuleWorker):
             None
         """
 
-        if rates.rates_id not in self.modules:
-            return
-
-        counter = self.modules[rates.rates_id]
-
         # update cache
-        lvap = RUNTIME.lvaps[counter.lvap]
-        lvap.rates = {x[0]: x[1] for x in rates.rates}
+        lvap = RUNTIME.lvaps[self.lvap]
+        lvap.rates = {x[0]: x[1] for x in response.rates}
 
         # update this object
-        counter.rates = {x[0]: x[1] for x in rates.rates}
+        self.rates = {x[0]: x[1] for x in response.rates}
 
         # call callback
-        handle_callback(counter, counter)
+        self.handle_callback(self)
 
 
-bind_module(LinkStatsWorker)
+class LVAPStatsWorker(ModuleLVAPPWorker):
+    """ Counter worker. """
+
+    pass
+
+
+def lvap_stats(**kwargs):
+    """Create a new module."""
+
+    return RUNTIME.components[LVAPStatsWorker.__module__].add_module(**kwargs)
+
+
+def bound_lvap_stats(self, **kwargs):
+    """Create a new module (app version)."""
+
+    kwargs['tenant_id'] = self.tenant.tenant_id
+    kwargs['lvap'] = self.addr
+    return lvap_stats(**kwargs)
+
+setattr(LVAP, LVAPStats.MODULE_NAME, bound_lvap_stats)
 
 
 def launch():
     """ Initialize the module. """
 
-    lvap_server = RUNTIME.components[LVAPPServer.__module__]
-    rest_server = RUNTIME.components[RESTServer.__module__]
-
-    worker = LinkStatsWorker(rest_server)
-    lvap_server.register_message(PT_RATES_RESPONSE,
-                                 RATES_RESPONSE,
-                                 worker.handle_rates_response)
-
-    return worker
+    return LVAPStatsWorker(LVAPStats, PT_RATES_RESPONSE, RATES_RESPONSE)

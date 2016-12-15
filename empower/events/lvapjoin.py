@@ -27,69 +27,58 @@
 
 """LVAP join event module."""
 
-from empower.core.module import ModuleHandler
-from empower.core.module import ModuleWorker
+from empower.core.app import EmpowerApp
 from empower.core.module import Module
-from empower.core.module import bind_module
-from empower.core.module import handle_callback
-from empower.restserver.restserver import RESTServer
-from empower.lvapp.lvappserver import LVAPPServer
+from empower.core.module import ModuleLVAPPEventWorker
 from empower.lvapp import PT_LVAP_JOIN
 
 from empower.main import RUNTIME
 
-import empower.logger
-LOG = empower.logger.get_logger()
-
-
-class LVAPJoinHandler(ModuleHandler):
-    pass
-
 
 class LVAPJoin(Module):
-    pass
-
-
-class LVAPJoinWorker(ModuleWorker):
-    """ LvapUp worker. """
+    """LVAPJoin."""
 
     MODULE_NAME = "lvapjoin"
-    MODULE_HANDLER = LVAPJoinHandler
-    MODULE_TYPE = LVAPJoin
 
-    def on_lvap_join(self, lvap):
-        """ Handle an LVAL JOIN event.
+    def handle_response(self, lvap):
+        """ Handle an LVAL_JOIN message.
         Args:
             lvap, an LVAP object
         Returns:
             None
         """
 
-        for event in self.modules.values():
+        lvaps = RUNTIME.tenants[self.tenant_id].lvaps
 
-            if event.tenant_id not in RUNTIME.tenants:
-                return
+        if lvap.addr not in lvaps:
+            return
 
-            lvaps = RUNTIME.tenants[event.tenant_id].lvaps
-
-            if lvap.addr not in lvaps:
-                return
-
-            LOG.info("Event: LVAP Join %s", lvap.addr)
-
-            handle_callback(lvap, event)
+        self.handle_callback(lvap)
 
 
-bind_module(LVAPJoinWorker)
+class LVAPJoinWorker(ModuleLVAPPEventWorker):
+    """LVAPJoin."""
+
+    pass
+
+
+def lvapjoin(**kwargs):
+    """Create a new module."""
+
+    return RUNTIME.components[LVAPJoinWorker.__module__].add_module(**kwargs)
+
+
+def app_lvapjoin(self, **kwargs):
+    """Create a new module (app version)."""
+
+    kwargs['tenant_id'] = self.tenant_id
+    return lvapjoin(**kwargs)
+
+
+setattr(EmpowerApp, LVAPJoin.MODULE_NAME, app_lvapjoin)
 
 
 def launch():
-    """ Initialize the module. """
+    """Initialize the module."""
 
-    lvap_server = RUNTIME.components[LVAPPServer.__module__]
-    rest_server = RUNTIME.components[RESTServer.__module__]
-
-    worker = LVAPJoinWorker(rest_server)
-    lvap_server.register_message(PT_LVAP_JOIN, None, worker.on_lvap_join)
-
-    return worker
+    return LVAPJoinWorker(LVAPJoin, PT_LVAP_JOIN)

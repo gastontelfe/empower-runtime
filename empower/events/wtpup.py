@@ -27,37 +27,21 @@
 
 """WTP up event module."""
 
-from empower.core.module import ModuleHandler
-from empower.core.module import ModuleWorker
+from empower.core.app import EmpowerApp
 from empower.core.module import Module
-from empower.core.module import bind_module
-from empower.core.module import handle_callback
-from empower.restserver.restserver import RESTServer
-from empower.lvapp.lvappserver import LVAPPServer
+from empower.datatypes.etheraddress import EtherAddress
+from empower.core.module import ModuleLVAPPEventWorker
 from empower.lvapp import PT_CAPS_RESPONSE
 
 from empower.main import RUNTIME
 
-import empower.logger
-LOG = empower.logger.get_logger()
-
-
-class WTPUpHandler(ModuleHandler):
-    pass
-
 
 class WTPUp(Module):
-    pass
-
-
-class WTPUpWorker(ModuleWorker):
     """WTPUp worker."""
 
     MODULE_NAME = "wtpup"
-    MODULE_HANDLER = WTPUpHandler
-    MODULE_TYPE = WTPUp
 
-    def on_wtp_up(self, caps_response):
+    def handle_response(self, caps_response):
         """ Handle an CAPS_RESPONSE message.
 
         Args:
@@ -67,34 +51,40 @@ class WTPUpWorker(ModuleWorker):
             None
         """
 
-        for event in self.modules.values():
+        addr = EtherAddress(caps_response.wtp)
 
-            if event.tenant_id not in RUNTIME.tenants:
-                return
+        if addr not in RUNTIME.tenants[self.tenant_id].wtps:
+            return
 
-            addr = caps_response.wtp
-            wtps = RUNTIME.tenants[event.tenant_id].wtps
+        wtp = RUNTIME.tenants[self.tenant_id].wtps[addr]
 
-            if addr not in wtps:
-                return
-
-            wtp = wtps[addr]
-
-            LOG.info("Event: WTP Up %s", wtp.addr)
-
-            handle_callback(wtp, event)
+        self.handle_callback(wtp)
 
 
-bind_module(WTPUpWorker)
+class WTPUpWorker(ModuleLVAPPEventWorker):
+    """ Counter worker. """
+
+    pass
+
+
+def wtpup(**kwargs):
+    """Create a new module."""
+    # import pdb
+    # pdb.set_trace()
+    return RUNTIME.components[WTPUpWorker.__module__].add_module(**kwargs)
+
+
+def app_wtpup(self, **kwargs):
+    """Create a new module (app version)."""
+    # import pdb
+    # pdb.set_trace()
+    kwargs['tenant_id'] = self.tenant_id
+    return wtpup(**kwargs)
+
+
+setattr(EmpowerApp, WTPUp.MODULE_NAME, app_wtpup)
 
 
 def launch():
-    """ Initialize the module. """
-
-    lvap_server = RUNTIME.components[LVAPPServer.__module__]
-    rest_server = RUNTIME.components[RESTServer.__module__]
-
-    worker = WTPUpWorker(rest_server)
-    lvap_server.register_message(PT_CAPS_RESPONSE, None, worker.on_wtp_up)
-
-    return worker
+    """Initialize the module."""
+    return WTPUpWorker(WTPUp, PT_CAPS_RESPONSE)

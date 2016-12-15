@@ -1,0 +1,186 @@
+---- SCAN_APP ----
+------ LVAPS CACHE -----
+lvap: router19, 00:1B:B3:E8:C0:33
+lvap: router19, 00:1B:B3:01:0B:DF
+lvap: router19, 00:1B:B3:6A:32:A1
+lvap: router15, 00:1B:B3:A3:6F:12
+lvap: router16, 00:1B:B3:D9:CA:21
+----- graph router15 ------
+SSID: empowerSDN, ID: 2, ADDR: 00:1B:B3:6A:32:A1, CHANNEL: 6, SIGNAL: -65, QUALITY: 45/70 
+SSID: empowerSDN, ID: 1, ADDR: 00:1B:B3:D9:CA:21, CHANNEL: 6, SIGNAL: -247, QUALITY: 70/70 
+----- neighborsConstraint router15 ------
+SSID: wifing, ADDR: C2:4A:00:A4:6B:DC, CHANNEL: 3, SIGNAL: -68, QUALITY: 42/70 
+SSID: inco, ADDR: C0:4A:00:A4:6B:82, CHANNEL: 6, SIGNAL: -40, QUALITY: 70/70 
+SSID: inco, ADDR: C0:4A:00:A4:57:E2, CHANNEL: 11, SIGNAL: -82, QUALITY: 28/70 
+SSID: wifing, ADDR: C2:4A:00:A4:57:E2, CHANNEL: 11, SIGNAL: -84, QUALITY: 26/70 
+SSID: inco, ADDR: C0:4A:00:A4:6B:60, CHANNEL: 6, SIGNAL: -39, QUALITY: 70/70 
+SSID: inco, ADDR: C0:4A:00:A4:6B:DC, CHANNEL: 3, SIGNAL: -70, QUALITY: 40/70 
+SSID: wifing, ADDR: C2:4A:00:A4:6B:60, CHANNEL: 6, SIGNAL: -35, QUALITY: 70/70 
+----- graph router16 ------
+SSID: empowerSDN, ID: 0, ADDR: 00:1B:B3:A3:6F:12, CHANNEL: 6, SIGNAL: -247, QUALITY: 70/70 
+SSID: empowerSDN, ID: 2, ADDR: 00:1B:B3:E8:C0:33, CHANNEL: 6, SIGNAL: -26, QUALITY: 70/70 
+----- neighborsConstraint router16 ------
+SSID: wifing, ADDR: C2:4A:00:A4:6B:DC, CHANNEL: 3, SIGNAL: -62, QUALITY: 48/70 
+SSID: inco, ADDR: C0:4A:00:A4:6B:82, CHANNEL: 6, SIGNAL: -39, QUALITY: 70/70 
+SSID: inco, ADDR: C0:4A:00:A4:57:E2, CHANNEL: 11, SIGNAL: -84, QUALITY: 26/70 
+SSID: wifing, ADDR: C2:4A:00:A4:6B:82, CHANNEL: 6, SIGNAL: -39, QUALITY: 70/70 
+SSID: wifing, ADDR: C2:4A:00:A4:57:E2, CHANNEL: 11, SIGNAL: -84, QUALITY: 26/70 
+SSID: inco, ADDR: C0:4A:00:A4:6B:60, CHANNEL: 6, SIGNAL: -41, QUALITY: 69/70 
+SSID: inco, ADDR: C0:4A:00:A4:6B:DC, CHANNEL: 3, SIGNAL: -62, QUALITY: 48/70 
+SSID: wifing, ADDR: C2:4A:00:A4:6B:60, CHANNEL: 6, SIGNAL: -79, QUALITY: 31/70 
+----- graph router19 ------
+SSID: empowerSDN, ID: 0, ADDR: 00:1B:B3:A3:6F:12, CHANNEL: 6, SIGNAL: -14, QUALITY: 70/70 
+SSID: empowerSDN, ID: 1, ADDR: 00:1B:B3:D9:CA:21, CHANNEL: 6, SIGNAL: -20, QUALITY: 70/70 
+----- neighborsConstraint router19 ------
+SSID: wifing, ADDR: C2:4A:00:A4:6B:DC, CHANNEL: 3, SIGNAL: -78, QUALITY: 32/70 
+SSID: inco, ADDR: C0:4A:00:A4:6B:82, CHANNEL: 6, SIGNAL: -32, QUALITY: 70/70 
+SSID: inco, ADDR: C0:4A:00:A4:57:E2, CHANNEL: 11, SIGNAL: -88, QUALITY: 22/70 
+SSID: wifing, ADDR: C2:4A:00:A4:6B:82, CHANNEL: 6, SIGNAL: -31, QUALITY: 70/70 
+SSID: wifing, ADDR: C2:4A:00:A4:57:E2, CHANNEL: 11, SIGNAL: -90, QUALITY: 20/70 
+SSID: inco, ADDR: C0:4A:00:A4:6B:60, CHANNEL: 6, SIGNAL: -22, QUALITY: 70/70 
+SSID: inco, ADDR: C0:4A:00:A4:6B:DC, CHANNEL: 3, SIGNAL: -79, QUALITY: 31/70 
+SSID: wifing, ADDR: C2:4A:00:A4:6B:60, CHANNEL: 6, SIGNAL: -22, QUALITY: 70/70 
+-----------
+     Mejor por ahora:
+     Nodo: 0 canal 1
+     Nodo: 1 canal 1
+     Nodo: 2 canal 1
+                5.065714285714286
+     Mejor por ahora:
+     Nodo: 0 canal 1
+     Nodo: 1 canal 1
+     Nodo: 2 canal 11
+                3.1257142857142854
+     Mejor por ahora:
+     Nodo: 0 canal 1
+     Nodo: 1 canal 11
+     Nodo: 2 canal 1
+                2.9857142857142853
+0) router15 -> 1 
+1) router16 -> 11 
+2) router19 -> 1 
+------ LVAPS CACHE -----
+lvap: router19, 00:1B:B3:A3:6F:12
+lvap: router15, 00:1B:B3:A5:91:AB
+lvap: router15, 00:1B:B3:6A:32:A1
+----- graph router15 ------
+SSID: empowerSDN, ID: 0, ADDR: 00:1B:B3:6A:32:A1, CHANNEL: 6, SIGNAL: -65, QUALITY: 45/70 
+SSID: empowerSDN, ID: 2, ADDR: 00:1B:B3:A3:6F:12, CHANNEL: 1, SIGNAL: -17, QUALITY: 70/70 
+----- neighborsConstraint router15 ------
+SSID: wifing, ADDR: C2:4A:00:A4:6B:DC, CHANNEL: 3, SIGNAL: -68, QUALITY: 42/70 
+SSID: inco, ADDR: C0:4A:00:A4:6B:82, CHANNEL: 6, SIGNAL: -84, QUALITY: 26/70 
+SSID: inco, ADDR: C0:4A:00:A4:57:E2, CHANNEL: 11, SIGNAL: -83, QUALITY: 27/70 
+SSID: wifing, ADDR: C2:4A:00:A4:6B:82, CHANNEL: 6, SIGNAL: -79, QUALITY: 31/70 
+SSID: wifing, ADDR: C2:4A:00:A4:57:E2, CHANNEL: 11, SIGNAL: -83, QUALITY: 27/70 
+SSID: inco, ADDR: C0:4A:00:A4:6B:60, CHANNEL: 6, SIGNAL: -83, QUALITY: 27/70 
+SSID: inco, ADDR: C0:4A:00:A4:6B:DC, CHANNEL: 3, SIGNAL: -68, QUALITY: 42/70 
+SSID: wifing, ADDR: C2:4A:00:A4:6B:60, CHANNEL: 6, SIGNAL: -35, QUALITY: 70/70 
+----- graph router16 ------
+SSID: empowerSDN, ID: 2, ADDR: 00:1B:B3:A3:6F:12, CHANNEL: 6, SIGNAL: -247, QUALITY: 70/70 
+SSID: empowerSDN, ID: 0, ADDR: 00:1B:B3:6A:32:A1, CHANNEL: 6, SIGNAL: -26, QUALITY: 70/70 
+----- neighborsConstraint router16 ------
+SSID: wifing, ADDR: C2:4A:00:A4:6B:DC, CHANNEL: 3, SIGNAL: -63, QUALITY: 47/70 
+SSID: inco, ADDR: C0:4A:00:A4:6B:82, CHANNEL: 6, SIGNAL: -84, QUALITY: 26/70 
+SSID: inco, ADDR: C0:4A:00:A4:57:E2, CHANNEL: 11, SIGNAL: -40, QUALITY: 70/70 
+SSID: wifing, ADDR: C2:4A:00:A4:6A:56, CHANNEL: 8, SIGNAL: -90, QUALITY: 20/70 
+SSID: wifing, ADDR: C2:4A:00:A4:57:E2, CHANNEL: 11, SIGNAL: -40, QUALITY: 70/70 
+SSID: inco, ADDR: C0:4A:00:A4:6B:60, CHANNEL: 6, SIGNAL: -84, QUALITY: 26/70 
+SSID: inco, ADDR: C0:4A:00:A4:6B:DC, CHANNEL: 3, SIGNAL: -62, QUALITY: 48/70 
+SSID: wifing, ADDR: C2:4A:00:A4:6B:60, CHANNEL: 6, SIGNAL: -72, QUALITY: 38/70 
+----- graph router19 ------
+SSID: empowerSDN, ID: 2, ADDR: 00:1B:B3:A3:6F:12, CHANNEL: 6, SIGNAL: -14, QUALITY: 70/70 
+SSID: empowerSDN, ID: 0, ADDR: 00:1B:B3:6A:32:A1, CHANNEL: 1, SIGNAL: -53, QUALITY: 57/70 
+----- neighborsConstraint router19 ------
+SSID: wifing, ADDR: C2:4A:00:A4:6B:DC, CHANNEL: 3, SIGNAL: -78, QUALITY: 32/70 
+SSID: inco, ADDR: C0:4A:00:A4:6B:82, CHANNEL: 6, SIGNAL: -77, QUALITY: 33/70 
+SSID: inco, ADDR: C0:4A:00:A4:57:E2, CHANNEL: 11, SIGNAL: -86, QUALITY: 24/70 
+SSID: wifing, ADDR: C2:4A:00:A4:6B:82, CHANNEL: 6, SIGNAL: -77, QUALITY: 33/70 
+SSID: wifing, ADDR: C2:4A:00:A4:57:E2, CHANNEL: 11, SIGNAL: -86, QUALITY: 24/70 
+SSID: inco, ADDR: C0:4A:00:A4:6B:60, CHANNEL: 6, SIGNAL: -66, QUALITY: 44/70 
+SSID: inco, ADDR: C0:4A:00:A4:6B:DC, CHANNEL: 3, SIGNAL: -79, QUALITY: 31/70 
+SSID: wifing, ADDR: C2:4A:00:A4:6B:60, CHANNEL: 6, SIGNAL: -67, QUALITY: 43/70 
+-----------
+     Mejor por ahora:
+     Nodo: 0 canal 1
+     Nodo: 1 canal 1
+     Nodo: 2 canal 1
+                3.8885714285714283
+     Mejor por ahora:
+     Nodo: 0 canal 1
+     Nodo: 1 canal 1
+     Nodo: 2 canal 11
+                3.22
+     Mejor por ahora:
+     Nodo: 0 canal 11
+     Nodo: 1 canal 1
+     Nodo: 2 canal 1
+                2.125714285714286
+0) router15 -> 11 
+1) router16 -> 1 
+2) router19 -> 1 
+------ LVAPS CACHE -----
+lvap: router19, 00:1B:B3:A5:91:AB
+lvap: router16, 00:1B:B3:A3:6F:12
+lvap: router16, 00:1B:B3:6A:32:A1
+lvap: router16, 00:1B:B3:01:0B:DF
+----- graph router15 ------
+SSID: empowerSDN, ID: 1, ADDR: 00:1B:B3:6A:32:A1, CHANNEL: 6, SIGNAL: -65, QUALITY: 45/70 
+SSID: empowerSDN, ID: 2, ADDR: 00:1B:B3:A5:91:AB, CHANNEL: 1, SIGNAL: -61, QUALITY: 49/70 
+----- neighborsConstraint router15 ------
+SSID: inco, ADDR: C0:4A:00:A4:6B:82, CHANNEL: 6, SIGNAL: -80, QUALITY: 30/70 
+SSID: wifing, ADDR: C2:4A:00:A4:6B:82, CHANNEL: 6, SIGNAL: -85, QUALITY: 25/70 
+SSID: inco, ADDR: C0:4A:00:A4:6B:60, CHANNEL: 6, SIGNAL: -84, QUALITY: 26/70 
+SSID: inco, ADDR: C0:4A:00:A4:6B:DC, CHANNEL: 3, SIGNAL: -68, QUALITY: 42/70 
+----- graph router16 ------
+SSID: empowerSDN, ID: 1, ADDR: 00:1B:B3:A3:6F:12, CHANNEL: 6, SIGNAL: -247, QUALITY: 70/70 
+SSID: empowerSDN, ID: 2, ADDR: 00:1B:B3:A5:91:AB, CHANNEL: 1, SIGNAL: -20, QUALITY: 70/70 
+----- neighborsConstraint router16 ------
+SSID: wifing, ADDR: C2:4A:00:A4:6B:DC, CHANNEL: 3, SIGNAL: -61, QUALITY: 49/70 
+SSID: inco, ADDR: C0:4A:00:A4:6B:82, CHANNEL: 6, SIGNAL: -83, QUALITY: 27/70 
+SSID: inco, ADDR: C0:4A:00:A4:57:E2, CHANNEL: 11, SIGNAL: -83, QUALITY: 27/70 
+SSID: wifing, ADDR: C2:4A:00:A4:6A:56, CHANNEL: 8, SIGNAL: -89, QUALITY: 21/70 
+SSID: wifing, ADDR: C2:4A:00:A4:57:E2, CHANNEL: 11, SIGNAL: -85, QUALITY: 25/70 
+SSID: inco, ADDR: C0:4A:00:A4:6B:60, CHANNEL: 6, SIGNAL: -74, QUALITY: 36/70 
+SSID: inco, ADDR: C0:4A:00:A4:6B:DC, CHANNEL: 3, SIGNAL: -62, QUALITY: 48/70 
+SSID: wifing, ADDR: C2:4A:00:A4:6B:60, CHANNEL: 6, SIGNAL: -82, QUALITY: 28/70 
+----- graph router19 ------
+SSID: empowerSDN, ID: 1, ADDR: 00:1B:B3:A3:6F:12, CHANNEL: 6, SIGNAL: -14, QUALITY: 70/70 
+SSID: empowerSDN, ID: 2, ADDR: 00:1B:B3:A5:91:AB, CHANNEL: 1, SIGNAL: -53, QUALITY: 57/70 
+----- neighborsConstraint router19 ------
+SSID: wifing, ADDR: C2:4A:00:A4:6B:DC, CHANNEL: 3, SIGNAL: -78, QUALITY: 32/70 
+SSID: inco, ADDR: C0:4A:00:A4:6B:82, CHANNEL: 6, SIGNAL: -76, QUALITY: 34/70 
+SSID: inco, ADDR: C0:4A:00:A4:57:E2, CHANNEL: 11, SIGNAL: -88, QUALITY: 22/70 
+SSID: wifing, ADDR: C2:4A:00:A4:6B:82, CHANNEL: 6, SIGNAL: -76, QUALITY: 34/70 
+SSID: wifing, ADDR: C2:4A:00:A4:57:E2, CHANNEL: 11, SIGNAL: -90, QUALITY: 20/70 
+SSID: inco, ADDR: C0:4A:00:A4:6B:60, CHANNEL: 6, SIGNAL: -62, QUALITY: 48/70 
+SSID: inco, ADDR: C0:4A:00:A4:6B:DC, CHANNEL: 3, SIGNAL: -78, QUALITY: 32/70 
+SSID: wifing, ADDR: C2:4A:00:A4:6B:60, CHANNEL: 6, SIGNAL: -67, QUALITY: 43/70 
+-----------
+     Mejor por ahora:
+     Nodo: 0 canal 1
+     Nodo: 1 canal 1
+     Nodo: 2 canal 1
+                2.7399999999999993
+     Mejor por ahora:
+     Nodo: 0 canal 1
+     Nodo: 1 canal 1
+     Nodo: 2 canal 11
+                1.7914285714285714
+     Mejor por ahora:
+     Nodo: 0 canal 1
+     Nodo: 1 canal 11
+     Nodo: 2 canal 1
+                1.7714285714285714
+     Mejor por ahora:
+     Nodo: 0 canal 11
+     Nodo: 1 canal 1
+     Nodo: 2 canal 11
+                1.4314285714285715
+     Mejor por ahora:
+     Nodo: 0 canal 11
+     Nodo: 1 canal 11
+     Nodo: 2 canal 1
+                1.4114285714285713
+0) router15 -> 11 
+1) router16 -> 11 
+2) router19 -> 1 

@@ -29,6 +29,7 @@
 
 from empower.persistence.persistence import TblBelongs
 from empower.persistence import Session
+from empower.datatypes.etheraddress import EtherAddress
 
 T_TYPE_SHARED = "shared"
 T_TYPE_UNIQUE = "unique"
@@ -72,6 +73,7 @@ class Tenant(object):
         self.lvaps = {}
         self.lvnfs = {}
         self.vaps = {}
+        self.components = {}
 
     def to_dict(self):
         """ Return a JSON-serializable dictionary representing the Poll """
@@ -86,6 +88,12 @@ class Tenant(object):
                 out[field] = attr
 
         return out
+
+    def get_prefix(self):
+        """Return tenant prefix."""
+
+        tokens = [self.tenant_id.hex[0:12][i:i + 2] for i in range(0, 12, 2)]
+        return EtherAddress(':'.join(tokens))
 
     def add_pnfdev(self, pnfdev):
         """Add a new PNF Dev to the Tenant.

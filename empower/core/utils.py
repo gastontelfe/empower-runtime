@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (c) 2015, Roberto Riggio
+# Copyright (c) 2016, Roberto Riggio
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,4 +25,14 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Application implementing an uplink stats tracker."""
+"""EmPOWER utils."""
+
+from empower.datatypes.etheraddress import EtherAddress
+
+
+def generate_bssid(base_mac, sta_mac):
+    """ Generate a new BSSID address. """
+
+    base = str(base_mac).split(":")[0:3]
+    sta = str(sta_mac).split(":")[3:6]
+    return EtherAddress(":".join(base + sta))

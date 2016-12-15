@@ -27,28 +27,32 @@
 
 """EmPOWER Primitive Base Class."""
 
-import time
 import re
 import json
 import types
-import tornado.web
-import tornado.httpserver
 import xmlrpc.client
 
-from uuid import UUID
+import tornado.web
+import tornado.httpserver
 from tornado.ioloop import IOLoop
+
+from uuid import UUID
 from multiprocessing.pool import ThreadPool
+
+import empower.logger
 
 from empower.core.jsonserializer import EmpowerEncoder
 from empower.restserver.apihandlers import EmpowerAPIHandlerUsers
+from empower.restserver.restserver import RESTServer
+from empower.lvapp.lvappserver import LVAPPServer
+from empower.lvnfp.lvnfpserver import LVNFPServer
 
 from empower.main import RUNTIME
 
-import empower.logger
 LOG = empower.logger.get_logger()
 
 
-_workers = ThreadPool(10)
+_WORKERS = ThreadPool(10)
 
 
 def exec_xmlrpc(callback, args=()):
@@ -67,97 +71,13 @@ def run_background(func, callback, args=(), kwds={}):
     def _callback(result):
         IOLoop.instance().add_callback(lambda: callback(result))
 
-    _workers.apply_async(func, args, kwds, _callback)
+    _WORKERS.apply_async(func, args, kwds, _callback)
 
 
 def on_complete(res):
     """XML RPC Callback."""
 
     pass
-
-
-def handle_callback(serializable, module):
-    """Handle an module callback.
-
-    Args:
-        serializable, an object implementing the to_dict() method
-        callback, the callback (url of method)
-
-    Returns:
-        None
-    """
-
-    # call callback if defined
-    if not module.callback:
-        return
-
-    callback = module.callback
-
-    try:
-
-        as_dict = serializable.to_dict()
-        as_json = json.dumps(as_dict, cls=EmpowerEncoder)
-
-        if isinstance(callback, types.FunctionType) or \
-           isinstance(callback, types.MethodType):
-
-            callback(serializable)
-
-        elif isinstance(callback, list) and len(callback) == 2:
-
-            exec_xmlrpc(callback, (as_json, ))
-
-        else:
-
-            raise TypeError("Invalid callback type")
-
-    except Exception as ex:
-
-        LOG.exception(ex)
-
-
-def base_add_module(worker, tenant_id, **kwargs):
-    """Create a new module.
-
-    Args:
-        worker: a worker object.
-        tenant_id: the tenant id.
-        kwargs: keyword arguments for the module.
-
-    Returns:
-        None
-    """
-
-    worker = RUNTIME.components[worker.__module__]
-    kwargs['tenant_id'] = tenant_id
-    kwargs['worker'] = worker
-    kwargs['module_type'] = worker.MODULE_NAME
-    new_module = worker.add_module(**kwargs)
-
-    return new_module
-
-
-def base_remove_module(worker, module_id):
-    """Remove a module."""
-
-    worker = RUNTIME.components[worker.__module__]
-    worker.remove_module(module_id)
-
-
-def bind_module(worker):
-    """Bind primitive."""
-
-    import sys
-    this = sys.modules[worker.__module__]
-
-    def add(tenant_id, **kwargs):
-        return base_add_module(worker, tenant_id, **kwargs)
-
-    def remove(tenant_id, module_id):
-        return base_remove_module(worker, module_id)
-
-    setattr(this, worker.MODULE_NAME, add)
-    setattr(this, 'remove_' + worker.MODULE_NAME, remove)
 
 
 class ModuleHandler(EmpowerAPIHandlerUsers):
@@ -177,20 +97,19 @@ class ModuleHandler(EmpowerAPIHandlerUsers):
         """
 
         try:
+
             if len(args) > 2 or len(args) < 1:
                 raise ValueError("Invalid URL")
             tenant_id = UUID(args[0])
-            resp = {k: v for k, v in self.worker.modules.items()
+
+            resp = {k: v for k, v in self.server.modules.items()
                     if v.tenant_id == tenant_id}
+
             if len(args) == 1:
-                self.write(json.dumps(resp.values(),
-                                      sort_keys=True,
-                                      cls=EmpowerEncoder))
+                self.write_as_json(resp.values())
             else:
                 module_id = int(args[1])
-                self.write(json.dumps(resp[module_id],
-                                      sort_keys=True,
-                                      cls=EmpowerEncoder))
+                self.write_as_json(resp[module_id])
         except KeyError as ex:
             self.send_error(404, message=ex)
         except ValueError as ex:
@@ -224,14 +143,14 @@ class ModuleHandler(EmpowerAPIHandlerUsers):
 
             del request['version']
             request['tenant_id'] = tenant_id
-            request['module_type'] = self.worker.MODULE_NAME
-            request['worker'] = self.worker
+            request['module_type'] = self.server.module.MODULE_NAME
+            request['worker'] = self.server
 
-            module = self.worker.add_module(**request)
+            module = self.server.add_module(**request)
 
             self.set_header("Location", "/api/v1/tenants/%s/%s/%s" %
                             (module.tenant_id,
-                             self.worker.MODULE_NAME,
+                             self.server.module.MODULE_NAME,
                              module.module_id))
 
             self.set_status(201, None)
@@ -262,13 +181,13 @@ class ModuleHandler(EmpowerAPIHandlerUsers):
             tenant_id = UUID(args[0])
             module_id = int(args[1])
 
-            module = self.worker.modules[module_id]
+            module = self.server.modules[module_id]
 
             if module.tenant_id != tenant_id:
                 raise KeyError("Module %u not in tenant %s" % (module_id,
                                                                tenant_id))
 
-            self.worker.remove_module(module_id)
+            self.server.remove_module(module_id)
 
         except KeyError as ex:
             self.send_error(404, message=ex)
@@ -299,34 +218,69 @@ class Module(object):
         self.__tenant_id = None
         self.__every = 5000
         self.__callback = None
-        self.__profiler = None
-        self.__last_poll = None
+        self.__worker = None
+        self.log = empower.logger.get_logger()
 
-    def tic(self):
-        """Start profiling."""
+    def handle_callback(self, serializable):
+        """Handle an module callback.
 
-        self.__profiler = time.time()
+        Args:
+            serializable, an object implementing the to_dict() method
 
-    def toc(self):
-        """Stop profiling."""
+        Returns:
+            None
+        """
 
-        self.__last_poll = int((time.time() - self.__profiler) * 1000)
-        self.__profiler = None
+        # call callback if defined
+        if not self.callback:
+            return
+
+        callback = self.callback
+
+        try:
+
+            as_dict = serializable.to_dict()
+            as_json = json.dumps(as_dict, cls=EmpowerEncoder)
+
+            if isinstance(callback, types.FunctionType) or \
+               isinstance(callback, types.MethodType):
+
+                callback(serializable)
+
+            elif isinstance(callback, list) and len(callback) == 2:
+
+                exec_xmlrpc(callback, (as_json, ))
+
+            else:
+
+                raise TypeError("Invalid callback type")
+
+        except Exception as ex:
+
+            LOG.exception(ex)
 
     @property
     def tenant_id(self):
+        """Return tenant id."""
+
         return self.__tenant_id
 
     @tenant_id.setter
     def tenant_id(self, value):
-        self.__tenant_id = UUID(str(value))
+        """ Set tenant id."""
+
+        self.__tenant_id = value
 
     @property
     def every(self):
+        """Return every."""
+
         return self.__every
 
     @every.setter
     def every(self, value):
+        """Set every."""
+
         self.__every = int(value)
 
     def to_dict(self):
@@ -336,8 +290,7 @@ class Module(object):
                'module_type': self.module_type,
                'tenant_id': self.tenant_id,
                'every': self.every,
-               'callback': self.callback,
-               'last_poll': self.__last_poll}
+               'callback': self.callback}
 
         return out
 
@@ -380,10 +333,12 @@ class Module(object):
         return hash(str(self.tenant_id) + str(self.module_id))
 
     def __eq__(self, other):
+
         if isinstance(other, Module):
             return self.module_type == other.module_type and \
-                   self.tenant_id == other.tenant_id and \
-                   self.every == other.every
+                self.tenant_id == other.tenant_id and \
+                self.every == other.every
+
         return False
 
     def __ne__(self, other):
@@ -409,6 +364,11 @@ class Module(object):
 
         pass
 
+    def handle_response(self, response):
+        """Stub handle response method."""
+
+        pass
+
 
 class ModuleWorker(object):
     """Module worker.
@@ -420,49 +380,69 @@ class ModuleWorker(object):
         modules: dictionary of modules currently active in this tenant
     """
 
-    MODULE_NAME = ""
-    MODULE_HANDLER = ModuleHandler
+    MODULE_NAME = None
     MODULE_TYPE = None
 
-    def __init__(self, rest_server):
+    def __init__(self, server, module, pt_type, pt_packet):
 
         self.__module_id = 0
         self.modules = {}
-        self.rest_server = rest_server
-        self.MODULE_HANDLER.worker = self
-        self.add_handlers()
+        self.pt_type = pt_type
+        self.pt_packet = pt_packet
+        self.module = module
+        self.pnfp_server = RUNTIME.components[server]
+        self.rest_server = RUNTIME.components[RESTServer.__module__]
 
-    def add_handlers(self):
-        """Add primitive handlers."""
+        module_name = self.module.MODULE_NAME
 
-        a = r"/api/v1/tenants/([a-zA-Z0-9:-]*)/%s/?" % self.MODULE_NAME
-        b = r"/api/v1/tenants/([a-zA-Z0-9:-]*)/%s/([0-9]*)/?" % \
-            self.MODULE_NAME
+        url = r"/api/v1/tenants/([a-zA-Z0-9:-]*)/%s/?"
+        handler = (url % module_name, ModuleHandler, dict(server=self))
+        self.rest_server.add_handler(handler)
 
-        handlers = [
-            (a, self.MODULE_HANDLER),
-            (b, self.MODULE_HANDLER),
-        ]
+        url = r"/api/v1/tenants/([a-zA-Z0-9:-]*)/%s/([0-9]*)/?"
+        handler = (url % module_name, ModuleHandler, dict(server=self))
+        self.rest_server.add_handler(handler)
 
-        self.rest_server.add_handlers(r".*$", handlers)
+        self.pnfp_server.register_message(self.pt_type, self.pt_packet,
+                                          self.handle_packet)
 
     def remove_handlers(self):
         """Remove primitive handlers."""
 
-        a = r"/api/v1/tenants/([a-zA-Z0-9:-]*)/%s/?$" % self.MODULE_NAME
-        b = r"/api/v1/tenants/([a-zA-Z0-9:-]*)/%s/([0-9]*)/?$" % \
-            self.MODULE_NAME
+        def determine(spec, regex, module_handler):
+            """Match url."""
 
-        re_a = re.compile(a)
-        re_b = re.compile(b)
+            if spec.handler_class == module_handler and spec.regex == regex:
+                return False
 
-        def determine(spec, re_a, re_b, module_handler):
-            return not (spec.handler_class == module_handler and
-                        (spec.regex == re_a or spec.regex == re_b))
+            return True
 
+        module_name = self.module.MODULE_NAME
+
+        url = r"/api/v1/tenants/([a-zA-Z0-9:-]*)/%s/?$"
+        regex = re.compile(url % module_name)
         for handler in self.rest_server.handlers:
-            handler[1][:] = [x for x in handler[1]
-                             if determine(x, re_a, re_b, self.MODULE_HANDLER)]
+            handler[1][:] = \
+                [x for x in handler[1] if determine(x, regex, ModuleHandler)]
+
+        url = r"/api/v1/tenants/([a-zA-Z0-9:-]*)/%s/([0-9]*)/?$"
+        regex = re.compile(url % module_name)
+        for handler in self.rest_server.handlers:
+            handler[1][:] = \
+                [x for x in handler[1] if determine(x, regex, ModuleHandler)]
+
+    def handle_packet(self, response):
+        """Handle response message."""
+
+        if response.module_id not in self.modules:
+            return
+
+        module = self.modules[response.module_id]
+
+        LOG.info("Received %s response (id=%u)", self.module.MODULE_NAME,
+                 response.module_id)
+
+        module.handle_response(response)
 
     @property
     def module_id(self):
@@ -481,26 +461,30 @@ class ModuleWorker(object):
         """Add a new module."""
 
         # check if module type has been set
-        if not self.MODULE_TYPE:
+        if not self.module:
             raise ValueError("Module type not set")
 
+        # add default args
+        kwargs['worker'] = self
+        kwargs['module_type'] = self.module.MODULE_NAME
+
         # check if all require parameters have been specified
-        for param in self.MODULE_TYPE.REQUIRED:
+        for param in self.module.REQUIRED:
             if param not in kwargs:
                 raise ValueError("missing %s param" % param)
 
         # instantiate module
-        module = self.MODULE_TYPE()
+        module = self.module()
 
         # set mandatory parameters
-        for arg in self.MODULE_TYPE.REQUIRED:
+        for arg in self.module.REQUIRED:
             if not hasattr(module, arg):
                 raise ValueError("Invalid param %s" % arg)
             setattr(module, arg, kwargs[arg])
 
         # set optional parameters
         specified = set(kwargs.keys())
-        required = set(self.MODULE_TYPE.REQUIRED)
+        required = set(self.module.REQUIRED)
         remaining = specified - required
         for arg in remaining:
             if not hasattr(module, arg):
@@ -550,3 +534,87 @@ class ModuleWorker(object):
             self.modules[module_id].stop()
 
         del self.modules[module_id]
+
+
+class ModuleEventWorker(ModuleWorker):
+    """Module event worker.
+
+    Keeps track of the currently defined modules for each tenant (events only)
+
+    Attributes:
+        module_id: Next module id
+        modules: dictionary of modules currently active in this tenant
+    """
+
+    def handle_packet(self, event):
+        """Handle response message."""
+
+        for module in self.modules.values():
+
+            if module.tenant_id not in RUNTIME.tenants:
+                continue
+
+            LOG.info("New event %s: (id=%u)", self.module.MODULE_NAME,
+                     module.module_id)
+
+            module.handle_response(event)
+
+
+class ModuleLVAPPWorker(ModuleWorker):
+    """Module worker (LVAP Server version).
+
+    Keeps track of the currently defined modules for each tenant (events only)
+
+    Attributes:
+        module_id: Next module id
+        modules: dictionary of modules currently active in this tenant
+    """
+
+    def __init__(self, module, pt_type, pt_packet=None):
+        ModuleWorker.__init__(self, LVAPPServer.__module__, module, pt_type,
+                              pt_packet)
+
+
+class ModuleLVNFPWorker(ModuleWorker):
+    """Module worker (LVAP Server version).
+
+    Keeps track of the currently defined modules for each tenant (events only)
+
+    Attributes:
+        module_id: Next module id
+        modules: dictionary of modules currently active in this tenant
+    """
+
+    def __init__(self, module, pt_type, pt_packet=None):
+        ModuleWorker.__init__(self, LVNFPServer.__module__, module, pt_type,
+                              pt_packet)
+
+
+class ModuleLVAPPEventWorker(ModuleEventWorker):
+    """Module worker (LVAP Server version).
+
+    Keeps track of the currently defined modules for each tenant (events only)
+
+    Attributes:
+        module_id: Next module id
+        modules: dictionary of modules currently active in this tenant
+    """
+
+    def __init__(self, module, pt_type, pt_packet=None):
+        ModuleEventWorker.__init__(self, LVAPPServer.__module__, module,
+                                   pt_type, pt_packet)
+
+
+class ModuleLVNFPEventWorker(ModuleEventWorker):
+    """Module worker (LVAP Server version).
+
+    Keeps track of the currently defined modules for each tenant (events only)
+
+    Attributes:
+        module_id: Next module id
+        modules: dictionary of modules currently active in this tenant
+    """
+
+    def __init__(self, module, pt_type, pt_packet=None):
+        ModuleEventWorker.__init__(self, LVNFPServer.__module__, module,
+                                   pt_type, pt_packet)

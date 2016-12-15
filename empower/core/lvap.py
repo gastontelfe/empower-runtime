@@ -27,14 +27,15 @@
 
 """EmPOWER Light Virtual Access Point (LVAP) class."""
 
-from empower.datatypes.etheraddress import EtherAddress
 from empower.core.resourcepool import ResourcePool
 from empower.core.resourcepool import ResourceBlock
 from empower.core.radioport import RadioPort
 from empower.core.radioport import DownlinkPort
 from empower.core.radioport import UplinkPort
-from empower.core.virtualport import VirtualPort
+from empower.core.virtualport import VirtualPortLvap
 from empower.core.intent import match_to_key
+from empower.core.utils import generate_bssid
+from empower.core.tenant import T_TYPE_SHARED
 
 import empower.logger
 LOG = empower.logger.get_logger()
@@ -148,8 +149,9 @@ class LVAP(object):
         self.supports = ResourcePool()
 
         # lvap bssid, this is the bssid to which the client is currently
-        # attached
-        self.lvap_bssid = lvap_bssid_addr
+        # attached, it can only be updated as a result of an auth request
+        # message
+        self._lvap_bssid = lvap_bssid_addr
 
         # the following parameters are only updated upon RX of a lvap status
         # update message from an agent
@@ -160,13 +162,13 @@ class LVAP(object):
         # will then dispatch an add lvap message in order to propagate the
         # change to the agent
         self._ssids = []
-        self._encap = EtherAddress("00:00:00:00:00:00")
+        self._encap = None
 
         # the following parameters can be updated by both agent and
         # controller. The controller sets them when a client successfully
         # associate. The agent sets them upon disassociation.
         self._assoc_id = 0
-        self._ssid = None
+        self._tenant = None
 
         # only one block supported, default block points to this
         self._downlink = DownlinkPort()
@@ -233,11 +235,11 @@ class LVAP(object):
             if port.iface != "empower0":
                 continue
 
-            virtual_port = VirtualPort(dpid=self.wtp.addr,
-                                       ovs_port_id=port.port_id,
-                                       virtual_port_id=0,
-                                       hwaddr=port.hwaddr,
-                                       iface=port.iface)
+            virtual_port = VirtualPortLvap(dpid=self.wtp.addr,
+                                           ovs_port_id=port.port_id,
+                                           virtual_port_id=0,
+                                           hwaddr=port.hwaddr,
+                                           iface=port.iface)
 
             # These are needed because when assigning the next method of a
             # virtual port I need to access the lvap configuration: encap, and
@@ -259,6 +261,17 @@ class LVAP(object):
 
         return self.__ports
 
+    def refresh_lvap(self):
+        """Send add lvap message on the selected port."""
+
+        for port in self.downlink.values():
+            port.block.radio.connection.send_add_lvap(port.lvap, port.block,
+                                                      self.downlink.SET_MASK)
+
+        for port in self.uplink.values():
+            port.block.radio.connection.send_add_lvap(port.lvap, port.block,
+                                                      self.uplink.SET_MASK)
+
     @property
     def encap(self):
         """Get the encap."""
@@ -269,23 +282,11 @@ class LVAP(object):
     def encap(self, encap):
         """ Set the encap. """
 
-        if encap is None:
-            encap = EtherAddress("00:00:00:00:00:00")
-
         if self._encap == encap:
             return
 
         self._encap = encap
-
-        for port in self.downlink.values():
-            port.block.radio.connection.send_add_lvap(port.lvap,
-                                                      port.block,
-                                                      self.downlink.SET_MASK)
-
-        for port in self.uplink.values():
-            port.block.radio.connection.send_add_lvap(port.lvap,
-                                                      port.block,
-                                                      self.uplink.SET_MASK)
+        self.refresh_lvap()
 
     @property
     def assoc_id(self):
@@ -301,16 +302,23 @@ class LVAP(object):
             return
 
         self._assoc_id = assoc_id
+        self.refresh_lvap()
 
-        for port in self.downlink.values():
-            port.block.radio.connection.send_add_lvap(port.lvap,
-                                                      port.block,
-                                                      self.downlink.SET_MASK)
+    @property
+    def lvap_bssid(self):
+        """Get the lvap_bssid."""
 
-        for port in self.uplink.values():
-            port.block.radio.connection.send_add_lvap(port.lvap,
-                                                      port.block,
-                                                      self.uplink.SET_MASK)
+        return self._lvap_bssid
+
+    @lvap_bssid.setter
+    def lvap_bssid(self, lvap_bssid):
+        """Set the assoc id."""
+
+        if self._lvap_bssid == lvap_bssid:
+            return
+
+        self._lvap_bssid = lvap_bssid
+        self.refresh_lvap()
 
     @property
     def ssids(self):
@@ -322,32 +330,41 @@ class LVAP(object):
     def ssids(self, ssids):
         """Set the ssids assigned to this LVAP."""
 
+        if self._ssids == ssids:
+            return
+
+        self._ssids = ssids
+        self.refresh_lvap()
+
+    def set_ssids(self, ssids):
+        """Set the ssids assigned to this LVAP without seding messages."""
+
         self._ssids = ssids
 
     @property
     def ssid(self):
         """ Get the SSID assigned to this LVAP. """
 
-        return self._ssid
+        if not self._tenant:
+            return None
 
-    @ssid.setter
-    def ssid(self, ssid):
+        return self._tenant.tenant_name
+
+    @property
+    def tenant(self):
+        """ Get the tenant assigned to this LVAP. """
+
+        return self._tenant
+
+    @tenant.setter
+    def tenant(self, tenant):
         """ Set the SSID. """
 
-        if self._ssid == ssid:
+        if self._tenant == tenant:
             return
 
-        self._ssid = ssid
-
-        for port in self.downlink.values():
-            port.block.radio.connection.send_add_lvap(port.lvap,
-                                                      port.block,
-                                                      self.downlink.SET_MASK)
-
-        for port in self.uplink.values():
-            port.block.radio.connection.send_add_lvap(port.lvap,
-                                                      port.block,
-                                                      self.uplink.SET_MASK)
+        self._tenant = tenant
+        self.refresh_lvap()
 
     @property
     def scheduled_on(self):
@@ -406,6 +423,39 @@ class LVAP(object):
 
         # pick default resource block
         default_block = pool.pop()
+
+        # If lvap is associated to a shared tenant. I need to reset the lvap
+        # before moving it.
+        if self._tenant and self._tenant.bssid_type == T_TYPE_SHARED:
+
+            # check if tenant is available at target block
+            base_bssid = self._tenant.get_prefix()
+            net_bssid = generate_bssid(base_bssid, default_block.hwaddr)
+
+            # if not ignore request
+            if net_bssid not in self._tenant.vaps:
+                LOG.error("VAP %s not found on tenant %s", net_bssid,
+                          self._tenant.tenant_name)
+                self.set_ports()
+                return
+
+            # check if vap is available at target block
+            if net_bssid != self._tenant.vaps[net_bssid].net_bssid:
+                LOG.error("VAP %s not available at target block %s",
+                          net_bssid, default_block)
+                self.set_ports()
+                return
+
+            # otherwise reset lvap
+            self._tenant = None
+            self.association_state = False
+            self.authentication_state = False
+            self._assoc_id = 0
+            self._lvap_bssid = net_bssid
+
+        else:
+
+            self._lvap_bssid = self.net_bssid
 
         # assign default port policy to downlink resource block, this will
         # trigger a send_add_lvap and a set_port (radio) message

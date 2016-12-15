@@ -63,6 +63,10 @@ PT_CAPS_RESPONSE = 0x16
 PT_ADD_VAP = 0x31
 PT_DEL_VAP = 0x32
 PT_STATUS_VAP = 0x33
+PT_SET_CHANNEL = 0x34
+PT_CHANNEL_RESPONSE = 0x35
+PT_SCAN_REQUEST = 0x36
+PT_SCAN_RESPONSE = 0x37
 
 HEADER = Struct("header", UBInt8("version"), UBInt8("type"), UBInt16("length"))
 
@@ -73,10 +77,16 @@ HELLO = Struct("hello", UBInt8("version"),
                UBInt8("type"),
                UBInt16("length"),
                UBInt32("seq"),
-               UBInt32("period"),
                Bytes("wtp", 6),
+               UBInt32("period"),
                UBInt32("uplink_bytes"),
                UBInt32("downlink_bytes"))
+
+SET_CHANNEL = Struct("set_channel", UBInt8("version"),
+                        UBInt8("type"),
+                        UBInt16("length"),
+                        UBInt32("seq"),
+                        UBInt8("channel"))
 
 PROBE_REQUEST = Struct("probe_request", UBInt8("version"),
                        UBInt8("type"),
@@ -84,9 +94,15 @@ PROBE_REQUEST = Struct("probe_request", UBInt8("version"),
                        UBInt32("seq"),
                        Bytes("wtp", 6),
                        Bytes("sta", 6),
+                       Bytes("hwaddr", 6),
                        UBInt8("channel"),
                        UBInt8("band"),
-                       Bytes("ssid", lambda ctx: ctx.length - 22))
+                       Bytes("ssid", lambda ctx: ctx.length - 28))
+
+SCAN_REQUEST = Struct("scan_request", UBInt8("version"),
+                        UBInt8("type"),
+                        UBInt16("length"),
+                        UBInt32("seq"))
 
 PROBE_RESPONSE = Struct("probe_response", UBInt8("version"),
                         UBInt8("type"),
@@ -99,13 +115,15 @@ AUTH_REQUEST = Struct("auth_request", UBInt8("version"),
                       UBInt16("length"),
                       UBInt32("seq"),
                       Bytes("wtp", 6),
-                      Bytes("sta", 6))
+                      Bytes("sta", 6),
+                      Bytes("bssid", 6))
 
 AUTH_RESPONSE = Struct("auth_response", UBInt8("version"),
                        UBInt8("type"),
                        UBInt16("length"),
                        UBInt32("seq"),
-                       Bytes("sta", 6))
+                       Bytes("sta", 6),
+                       Bytes("bssid", 6))
 
 ASSOC_REQUEST = \
     Struct("assoc_request", UBInt8("version"),
@@ -114,7 +132,8 @@ ASSOC_REQUEST = \
            UBInt32("seq"),
            Bytes("wtp", 6),
            Bytes("sta", 6),
-           Bytes("ssid", lambda ctx: ctx.length - 20))
+           Bytes("bssid", 6),
+           Bytes("ssid", lambda ctx: ctx.length - 26))
 
 ASSOC_RESPONSE = Struct("assoc_response", UBInt8("version"),
                         UBInt8("type"),
@@ -131,6 +150,7 @@ ADD_LVAP = Struct("add_lvap", UBInt8("version"),
                             Bit("associated"),
                             Bit("authenticated")),
                   UBInt16("assoc_id"),
+                  Bytes("hwaddr", 6),
                   UBInt8("channel"),
                   UBInt8("band"),
                   Bytes("sta", 6),
@@ -157,6 +177,7 @@ STATUS_LVAP = Struct("status_lvap", UBInt8("version"),
                      Bytes("wtp", 6),
                      Bytes("sta", 6),
                      Bytes("encap", 6),
+                     Bytes("hwaddr", 6),
                      UBInt8("channel"),
                      UBInt8("band"),
                      Bytes("net_bssid", 6),
@@ -168,9 +189,11 @@ CAPS_REQUEST = Struct("caps_request", UBInt8("version"),
                       UBInt16("length"),
                       UBInt32("seq"))
 
-CAPS_R = Sequence("blocks", UBInt8("channel"),
+CAPS_R = Sequence("blocks",
+                  Bytes("hwaddr", 6),
+                  UBInt8("channel"),
                   UBInt8("band"),
-                  BitStruct("flags", Padding(15), Bit("blacklisted")))
+                  BitStruct("flags", Padding(16)))
 
 CAPS_P = Sequence("ports", Bytes("hwaddr", 6),
                   UBInt16("port_id"),
@@ -186,14 +209,36 @@ CAPS_RESPONSE = Struct("caps_response", UBInt8("version"),
                        Array(lambda ctx: ctx.nb_resources_elements, CAPS_R),
                        Array(lambda ctx: ctx.nb_ports_elements, CAPS_P))
 
+CHANNEL_RESPONSE = Struct("channel_response", UBInt8("version"),
+                       UBInt8("type"),
+                       UBInt16("length"),
+                       UBInt32("seq"),
+                       Bytes("wtp", 6),
+                       UBInt8("nb_resources_elements"),
+                       UBInt8("nb_ports_elements"),
+                       Array(lambda ctx: ctx.nb_resources_elements, CAPS_R),
+                       Array(lambda ctx: ctx.nb_ports_elements, CAPS_P))
+
+SCAN_RESPONSE = Struct("scan_response", UBInt8("version"),
+                       UBInt8("type"),
+                       UBInt16("length"),
+                       UBInt32("seq"),
+                       Bytes("wtp", 6),
+                       Bytes("scan", lambda ctx: ctx.length - 14))                       
+
 SET_PORT = Struct("set_port", UBInt8("version"),
                   UBInt8("type"),
                   UBInt16("length"),
                   UBInt32("seq"),
                   BitStruct("flags", Padding(15),
                             Bit("no_ack")),
+                  Bytes("hwaddr", 6),
+                  UBInt8("channel"),
+                  UBInt8("band"),
                   Bytes("sta", 6),
                   UBInt16("rts_cts"),
+                  UBInt8("tx_mcast"),
+                  UBInt8("ur_mcast_count"),
                   UBInt8("nb_mcses"),
                   Array(lambda ctx: ctx.nb_mcses, UBInt8("mcs")))
 
@@ -205,9 +250,12 @@ STATUS_PORT = Struct("status_port", UBInt8("version"),
                                Bit("no_ack")),
                      Bytes("wtp", 6),
                      Bytes("sta", 6),
+                     Bytes("hwaddr", 6),
                      UBInt8("channel"),
                      UBInt8("band"),
                      UBInt16("rts_cts"),
+                     UBInt8("tx_mcast"),
+                     UBInt8("ur_mcast_count"),
                      UBInt8("nb_mcses"),
                      Array(lambda ctx: ctx.nb_mcses, UBInt8("mcs")))
 
@@ -215,20 +263,22 @@ ADD_VAP = Struct("add_vap", UBInt8("version"),
                  UBInt8("type"),
                  UBInt16("length"),
                  UBInt32("seq"),
+                 Bytes("hwaddr", 6),
                  UBInt8("channel"),
                  UBInt8("band"),
                  Bytes("net_bssid", 6),
-                 Bytes("ssid", lambda ctx: ctx.length - 16))
+                 Bytes("ssid", lambda ctx: ctx.length - 22))
 
 STATUS_VAP = Struct("status_vap", UBInt8("version"),
                     UBInt8("type"),
                     UBInt16("length"),
                     UBInt32("seq"),
                     Bytes("wtp", 6),
+                    Bytes("hwaddr", 6),
                     UBInt8("channel"),
                     UBInt8("band"),
                     Bytes("net_bssid", 6),
-                    Bytes("ssid", lambda ctx: ctx.length - 22))
+                    Bytes("ssid", lambda ctx: ctx.length - 28))
 
 PT_TYPES = {PT_BYE: None,
             PT_REGISTER: None,
@@ -248,7 +298,11 @@ PT_TYPES = {PT_BYE: None,
             PT_CAPS_RESPONSE: CAPS_RESPONSE,
             PT_SET_PORT: SET_PORT,
             PT_STATUS_PORT: STATUS_PORT,
-            PT_STATUS_VAP: STATUS_VAP}
+            PT_STATUS_VAP: STATUS_VAP,
+            PT_SET_CHANNEL: SET_CHANNEL,
+            PT_CHANNEL_RESPONSE: CHANNEL_RESPONSE,
+            PT_SCAN_REQUEST: SCAN_REQUEST,
+            PT_SCAN_RESPONSE: SCAN_RESPONSE,}
 
 PT_TYPES_HANDLERS = {PT_BYE: [],
                      PT_REGISTER: [],
@@ -268,4 +322,6 @@ PT_TYPES_HANDLERS = {PT_BYE: [],
                      PT_CAPS_RESPONSE: [],
                      PT_SET_PORT: [],
                      PT_STATUS_PORT: [],
-                     PT_STATUS_VAP: []}
+                     PT_STATUS_VAP: [],
+                     PT_CHANNEL_RESPONSE: [],
+                     PT_SCAN_RESPONSE: []}

@@ -25,39 +25,4 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-""" OAI Server module. """
-
-from construct import Sequence
-from construct import Array
-from construct import Struct
-from construct import UBInt8
-from construct import UBInt16
-from construct import UBInt32
-from construct import Bytes
-from construct import Range
-from construct import BitStruct
-from construct import Bit
-from construct import Padding
-
-
-PT_VERSION = 0x00
-
-PT_HELLO = 0x00
-PT_BYE = 0x01
-PT_REGISTER = 0xFF
-
-
-HEADER = Struct("header", UBInt8("version"), UBInt8("type"), UBInt16("length"))
-
-HELLO = Struct("hello", UBInt32("version"),
-               UBInt32("type"),
-               UBInt32("xid"))
-
-
-PT_TYPES = {PT_BYE: None,
-            PT_REGISTER: None,
-            PT_HELLO: HELLO}
-
-PT_TYPES_HANDLERS = {PT_BYE: [],
-                     PT_REGISTER: [],
-                     PT_HELLO: []}
+"""Prueba Apps."""

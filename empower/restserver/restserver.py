@@ -27,24 +27,22 @@
 
 """Exposes a RESTful interface for EmPOWER."""
 
-import json
 import tornado.web
 import tornado.httpserver
 
-from uuid import UUID
 from tornado.web import MissingArgumentError
-
+from uuid import UUID
 from empower import settings
 from empower.core.account import ROLE_ADMIN, ROLE_USER
-from empower.core.jsonserializer import EmpowerEncoder
 from empower.restserver.apihandlers import EmpowerAPIHandler
-from empower.restserver.aclhandler import AllowHandler
-from empower.restserver.aclhandler import DenyHandler
 from empower.main import _do_launch
 from empower.main import _parse_args
 from empower.main import RUNTIME
 from empower.core.tenant import T_TYPES
 from empower.core.tenant import T_TYPE_UNIQUE
+from empower.datatypes.ssid import SSID
+from empower.datatypes.etheraddress import EtherAddress
+
 
 import empower.logger
 LOG = empower.logger.get_logger()
@@ -56,6 +54,8 @@ def exceptions(method):
     """Decorator catching the most common exceptions."""
 
     def magic(self, *args, **kwargs):
+        """Perform basic exception catching in rest calls."""
+
         try:
             method(self, *args, **kwargs)
         except KeyError as ex:
@@ -183,6 +183,127 @@ class ManageTenantHandler(BaseHandler):
                     tenant=tenant)
 
 
+class ACLHandler(EmpowerAPIHandler):
+
+    """ACL handler. Used to view and manipulate the ACL."""
+
+    STRUCT = None
+    HANDLERS = []
+
+    def get(self, *args, **kwargs):
+        """ List the entire ACL or just the specified entry.
+
+        Args:
+            addr: the station address
+
+        Example URLs:
+
+            GET /api/v1/[allow|deny]
+            GET /api/v1/[allow|deny/11:22:33:44:55:66
+        """
+
+        try:
+
+            if len(args) > 1:
+                raise ValueError("Invalid URL")
+
+            acl = getattr(RUNTIME, self.STRUCT)
+
+            if len(args) == 0:
+                self.write_as_json(acl.values())
+            else:
+                if EtherAddress(args[0]) in acl:
+                    self.write_as_json(EtherAddress(args[0]))
+                else:
+                    raise KeyError(EtherAddress(args[0]))
+
+        except KeyError as ex:
+            self.send_error(404, message=ex)
+        except ValueError as ex:
+            self.send_error(400, message=ex)
+
+    def post(self, *args, **kwargs):
+        """ Add new entry to ACL.
+
+        Args:
+            None
+
+        Request:
+            version: protocol version (1.0)
+            sta: the station address
+
+        Example URLs:
+
+            POST /api/v1/[allow|deny]
+        """
+        try:
+
+            if len(args) != 0:
+                raise ValueError("Invalid URL")
+
+            request = tornado.escape.json_decode(self.request.body)
+
+            if "version" not in request:
+                raise ValueError("missing version element")
+
+            if "sta" not in request:
+                raise ValueError("missing sta element")
+
+            label = ""
+
+            if "label" in request:
+                label = request['label']
+
+            func = getattr(RUNTIME, 'add_%s' % self.STRUCT)
+            func(EtherAddress(request['sta']), label)
+
+            self.set_header("Location", "/api/v1/allow/%s" % request['sta'])
+
+        except KeyError as ex:
+            print(ex)
+            self.send_error(404, message=ex)
+        except ValueError as ex:
+            self.send_error(400, message=ex)
+
+        self.set_status(201, None)
+
+    def delete(self, *args, **kwargs):
+        """ Delete entry from ACL.
+
+        Args:
+            addr: the station address
+
+        Example URLs:
+
+            DELETE /api/v1/[allow|deny]/11:22:33:44:55:66
+        """
+
+        try:
+            if len(args) != 1:
+                raise ValueError("Invalid URL")
+            func = getattr(RUNTIME, 'remove_%s' % self.STRUCT)
+            func(EtherAddress(args[0]))
+        except KeyError as ex:
+            self.send_error(404, message=ex)
+        except ValueError as ex:
+            self.send_error(400, message=ex)
+        self.set_status(204, None)
+
+
+class AllowHandler(ACLHandler):
+    """ Allow handler. """
+
+    STRUCT = "allowed"
+    HANDLERS = [r"/api/v1/allow/?",
+                r"/api/v1/allow/([a-zA-Z0-9:]*)/?"]
+
+
+class DenyHandler(ACLHandler):
+    """ Deny handler. """
+
+    STRUCT = "denied"
+    HANDLERS = [r"/api/v1/deny/?",
+                r"/api/v1/deny/([a-zA-Z0-9:]*)/?"]
 
 
 class AccountsHandler(EmpowerAPIHandler):
@@ -218,9 +339,9 @@ class AccountsHandler(EmpowerAPIHandler):
             for account in RUNTIME.accounts:
                 accounts[account] = RUNTIME.accounts[account].to_dict()
             if len(args) == 0:
-                self.write(json.dumps(accounts, cls=EmpowerEncoder))
+                self.write_as_json(accounts)
             else:
-                self.write(json.dumps(accounts[args[0]], cls=EmpowerEncoder))
+                self.write_as_json(accounts[args[0]])
         except ValueError as ex:
             self.send_error(400, message=ex)
         except KeyError as ex:
@@ -348,8 +469,6 @@ class AccountsHandler(EmpowerAPIHandler):
             self.send_error(400, message=ex)
         except KeyError as ex:
             self.send_error(404, message=ex)
-        except KeyError as ex:
-            self.send_error(404, message=ex)
 
         self.set_status(204, None)
 
@@ -417,9 +536,9 @@ class ComponentsHandler(EmpowerAPIHandler):
                     componets[component] = {}
 
             if len(args) == 0:
-                self.write(json.dumps(componets, cls=EmpowerEncoder))
+                self.write_as_json(componets)
             else:
-                self.write(json.dumps(componets[args[0]], cls=EmpowerEncoder))
+                self.write_as_json(componets[args[0]])
 
         except ValueError as ex:
             self.send_error(400, message=ex)
@@ -581,11 +700,11 @@ class PendingTenantHandler(EmpowerAPIHandler):
                     pendings = RUNTIME.load_pending_tenants(user)
                 else:
                     pendings = RUNTIME.load_pending_tenants()
-                self.write(json.dumps(pendings, cls=EmpowerEncoder))
+                self.write_as_json(pendings)
             else:
                 tenant_id = UUID(args[0])
                 pending = RUNTIME.load_pending_tenant(tenant_id)
-                self.write(json.dumps(pending, cls=EmpowerEncoder))
+                self.write_as_json(pending)
         except ValueError as ex:
             self.send_error(400, message=ex)
         except KeyError as ex:
@@ -639,9 +758,11 @@ class PendingTenantHandler(EmpowerAPIHandler):
             else:
                 tenant_id = None
 
+            tenant_name = SSID(request['tenant_name'])
+
             RUNTIME.request_tenant(self.account.username,
                                    request['desc'],
-                                   request['tenant_name'],
+                                   tenant_name,
                                    bssid_type,
                                    tenant_id)
 
@@ -720,13 +841,13 @@ class TenantHandler(EmpowerAPIHandler):
                 user = self.get_argument("user", default=None)
                 if user:
                     filtered = [x for x in tenants if x.owner == user]
-                    self.write(json.dumps(filtered, cls=EmpowerEncoder))
+                    self.write_as_json(filtered)
                 else:
-                    self.write(json.dumps(tenants, cls=EmpowerEncoder))
+                    self.write_as_json(tenants)
             else:
                 tenant_id = UUID(args[0])
                 tenant = RUNTIME.tenants[tenant_id]
-                self.write(json.dumps(tenant, cls=EmpowerEncoder))
+                self.write_as_json(tenant)
         except ValueError as ex:
             self.send_error(400, message=ex)
         except KeyError as ex:
@@ -783,9 +904,11 @@ class TenantHandler(EmpowerAPIHandler):
             else:
                 tenant_id = None
 
+            tenant_name = SSID(request['tenant_name'])
+
             RUNTIME.add_tenant(request['owner'],
                                request['desc'],
-                               request['tenant_name'],
+                               tenant_name,
                                bssid_type,
                                tenant_id)
 
@@ -831,6 +954,184 @@ class TenantHandler(EmpowerAPIHandler):
         self.set_status(204, None)
 
 
+class TenantComponentsHandler(EmpowerAPIHandler):
+    """Components handler. Used to load/unload components."""
+
+    HANDLERS = \
+        [r"/api/v1/tenants/([a-zA-Z0-9-]*)/components/?",
+         r"/api/v1/tenants/([a-zA-Z0-9-]*)/components/([a-zA-Z0-9:\-.]*)/?"]
+
+    def get(self, *args):
+        """ Lists either all the components running in this controller or just
+        the one requested. Returns 404 if the requested component does not
+        exists.
+
+        Args:
+            tenant_id: the tenant id
+            component_id: the id of a component istance
+
+        Example URLs:
+
+            GET /api/v1/tenants/52313ecb-9d00-4b7d-b873-b55d3d9ada26
+            GET /api/v1/tenants/52313ecb-9d00-4b7d-b873-b55d3d9ada26/<id>
+
+        """
+
+        try:
+
+            if len(args) < 1 or len(args) > 2:
+                raise ValueError("Invalid url")
+
+            tenant_id = UUID(args[0])
+            tenant = RUNTIME.tenants[tenant_id]
+
+            if len(args) == 1:
+                self.write_as_json(tenant.components)
+            else:
+                componet_id = args[1]
+                self.write_as_json(tenant.components[componet_id])
+
+        except ValueError as ex:
+            self.send_error(400, message=ex)
+        except KeyError as ex:
+            self.send_error(404, message=ex)
+
+    def put(self, *args):
+        """ Update a component.
+
+        Args:
+            tenant_id: the tenant id
+            component_id: the id of a component istance
+
+        Request:
+            version: protocol version (1.0)
+            params: dictionary of parametes supported by the component
+                    as reported by the GET request
+
+        Example URLs:
+
+            PUT /api/v1/tenants/52313ecb-9d00-4b7d-b873-b55d3d9ada26/<id>
+
+            {
+              "version" : 1.0,
+              "params" : { "every": 2000 }
+            }
+
+        """
+
+        try:
+
+            if len(args) != 2:
+                raise ValueError("Invalid url")
+
+            request = tornado.escape.json_decode(self.request.body)
+
+            if "version" not in request:
+                raise ValueError("missing version element")
+
+            if "params" not in request:
+                raise ValueError("missing params element")
+
+            tenant_id = UUID(args[0])
+            tenant = RUNTIME.tenants[tenant_id]
+
+            app_id = args[1]
+            app = tenant.components[app_id]
+
+            for param in request['params']:
+                setattr(app, param, request['params'][param])
+
+        except ValueError as ex:
+            self.send_error(400, message=ex)
+        except KeyError as ex:
+            self.send_error(404, message=ex)
+
+        self.set_status(204, None)
+
+    def delete(self, *args, **kwargs):
+        """ Unload a component.
+
+        Args:
+            tenant_id: the tenant id
+            component_id: the id of a component istance
+
+        Example URLs:
+
+            DELETE /api/v1/tenants/52313ecb-9d00-4b7d-b873-b55d3d9ada26/<id>
+
+        """
+
+        try:
+
+            if len(args) != 2:
+                raise ValueError("Invalid url")
+
+            tenant_id = UUID(args[0])
+            app_id = args[1]
+
+            RUNTIME.unregister_app(tenant_id, app_id)
+
+        except ValueError as ex:
+            self.send_error(400, message=ex)
+        except KeyError as ex:
+            self.send_error(404, message=ex)
+
+        self.set_status(204, None)
+
+    def post(self, *args, **kwargs):
+        """ Add a component.
+
+        Args:
+            tenant_id: the tenant id
+            component_id: the id of a component istance
+
+        Request:
+            version: protocol version (1.0)
+            argv: the app to be loaded
+            params: the apps parameters
+
+        Example URLs:
+
+            POST
+                /api/v1/tenants/52313ecb-9d00-4b7d-b873-b55d3d9ada26/components
+            {
+              "version" : 1.0,
+              "argv" : "apps.pollers.linkstatspoller"
+            }
+
+        """
+
+        try:
+
+            if len(args) != 1:
+                raise ValueError("Invalid url")
+
+            request = tornado.escape.json_decode(self.request.body)
+
+            if "version" not in request:
+                raise ValueError("missing version element")
+
+            if "argv" not in request:
+                raise ValueError("missing argv element")
+
+            tenant_id = UUID(args[0])
+
+            argv = request['argv'].split(" ")
+            argv.append("--tenant_id=%s" % tenant_id)
+
+            components, components_order = _parse_args(argv)
+
+            if not _do_launch(components, components_order):
+                raise ValueError("Invalid args")
+
+        except ValueError as ex:
+            self.send_error(400, message=ex)
+        except KeyError as ex:
+            self.send_error(404, message=ex)
+
+        self.set_status(201, None)
+
+
 class RESTServer(tornado.web.Application):
     """Exposes the REST API."""
 
@@ -842,6 +1143,7 @@ class RESTServer(tornado.web.Application):
                 ManageTenantHandler,
                 AccountsHandler,
                 ComponentsHandler,
+                TenantComponentsHandler,
                 PendingTenantHandler,
                 TenantHandler,
                 AllowHandler,

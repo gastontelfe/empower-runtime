@@ -27,34 +27,8 @@
 
 """EmPOWER Radio Port."""
 
-from empower.datatypes.etheraddress import EtherAddress
-
 from empower.core.resourcepool import build_block
 from empower.core.resourcepool import ResourceBlock
-
-
-def build_port(block):
-
-    if isinstance(block, RadioPort):
-
-        requested = block
-
-    elif isinstance(block, tuple):
-
-        if len(tuple) < 1:
-            raise ValueError("Invalid tuple")
-
-        from empower.main import RUNTIME
-
-        lvap = RUNTIME.lvaps[EtherAddress(block[0])]
-        requested = RadioPort(lvap)
-
-    else:
-
-        raise ValueError("Expected ResourceBlock or tuple, got %s",
-                         type(block))
-
-    return requested
 
 
 class RadioPort():
@@ -82,18 +56,12 @@ class RadioPort():
 
       lvap, an LVAP object
       block, the block that this port is configuring
-      no_ack, do not wait for ACKs when transmitting to this LVAP
-      rts_cts, use RTS/CTS when transmitting to this LVAP
-      mcs, supported mcs-es.
     """
 
     def __init__(self, lvap, block):
 
         self._lvap = lvap
         self._block = block
-        self._no_ack = False
-        self._rts_cts = 2346
-        self._mcs = set()
 
     def to_dict(self):
         """ Return a JSON-serializable dictionary representing the Port """
@@ -122,7 +90,7 @@ class RadioPort():
 
     @block.setter
     def block(self, block):
-        """ Set the LVAP. """
+        """ Set the block. """
 
         self._block = block
 
@@ -130,66 +98,49 @@ class RadioPort():
     def mcs(self):
         """ Get set of MCS. """
 
-        return self._mcs
+        return self._block.tx_policies[self._lvap.addr].mcs
 
     @mcs.setter
     def mcs(self, mcs):
         """ Set the list of MCS. """
 
-        if self._block.supports & set(mcs) == self._mcs:
-            return
-
-        self._mcs = self._block.supports & set(mcs)
-
-        self.block.radio.connection.send_set_port(self)
+        self._block.tx_policies[self._lvap.addr].mcs = mcs
 
     @property
     def no_ack(self):
         """ Get no ack flag. """
 
-        return self._no_ack
+        return self._block.tx_policies[self._lvap.addr].no_ack
 
     @no_ack.setter
     def no_ack(self, no_ack):
-        """ Set no ack flag. """
+        """ Set the no ack flag. """
 
-        if no_ack == self._no_ack:
-            return
-
-        self._no_ack = True if no_ack else False
-
-        self.block.radio.connection.send_set_port(self)
+        self._block.tx_policies[self._lvap.addr].no_ack = no_ack
 
     @property
     def rts_cts(self):
-        """ Get rts_cts flag. """
+        """ Get rts_cts . """
 
-        return self._rts_cts
+        return self._block.tx_policies[self._lvap.addr].rts_cts
 
-    @rts_cts.setter
+    @rts_cts .setter
     def rts_cts(self, rts_cts):
-        """ Set rts_cts flag. """
+        """ Set rts_cts . """
 
-        if rts_cts == self._rts_cts:
-            return
-
-        self._rts_cts = rts_cts
-
-        self.block.radio.connection.send_set_port(self)
+        self._block.tx_policies[self._lvap.addr].rts_cts = rts_cts
 
     def __eq__(self, other):
 
-        return (other.lvap == self.lvap and
-                other.no_ack == self.no_ack and
-                other.rts_cts == self.rts_cts)
+        return other.lvap == self.lvap
 
     def __repr__(self):
 
-        no_ack = ", NO_ACK" if self.no_ack else ""
+        no_ack = self.no_ack
         mcs = ', '.join([str(x) for x in sorted(list(self.mcs))])
 
-        out = "(%s, mcs [%s], rts/cts %u%s)" % (self.lvap.addr, mcs,
-                                                self.rts_cts, no_ack)
+        out = "(%s, mcs [%s], rts/cts %u, ack %s)" % \
+            (self.lvap.addr, mcs, self.rts_cts, str(no_ack))
 
         return out
 
@@ -230,7 +181,6 @@ class RadioPortProp(dict):
         """Notice this will set the item without sending out any message."""
 
         key = build_block(key)
-        value = build_port(value)
 
         if not isinstance(key, ResourceBlock):
             raise KeyError("Expected ResourceBlock, got %s" % type(key))
@@ -258,7 +208,6 @@ class RadioPortProp(dict):
     def __setitem__(self, key, value):
 
         key = build_block(key)
-        value = build_port(value)
 
         if not isinstance(key, ResourceBlock):
             raise KeyError("Expected ResourceBlock, got %s" % type(key))
@@ -271,9 +220,6 @@ class RadioPortProp(dict):
 
             # update dict
             dict.__setitem__(self, key, value)
-
-            # update port configuration
-            key.radio.connection.send_set_port(value)
 
         # the block is not found, max_ports is exceed
         elif dict.__len__(self) == self.MAX_PORTS:
@@ -288,9 +234,6 @@ class RadioPortProp(dict):
 
             # update LVAP configuration
             key.radio.connection.send_add_lvap(value.lvap, key, self.SET_MASK)
-
-            # update Port configuration
-            key.radio.connection.send_set_port(value)
 
     def __getitem__(self, key):
 

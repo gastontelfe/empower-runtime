@@ -25,65 +25,84 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""WTP down event module."""
+"""WTP up event module."""
 
 from empower.core.app import EmpowerApp
 from empower.core.module import Module
 from empower.datatypes.etheraddress import EtherAddress
 from empower.core.module import ModuleLVAPPEventWorker
-from empower.lvapp import PT_BYE
+from empower.lvapp import PT_SCAN_RESPONSE
+from empower.scan.neighbor import Neighbor
+from empower.scan.neighbor import Neighbors
 
 from empower.main import RUNTIME
 
 
-class WTPDown(Module):
-    """WTPDown worker."""
+class ScanReceived(Module):
+    """ScanResponse worker."""
 
-    MODULE_NAME = "wtpdown"
+    MODULE_NAME = "scanreceived"
 
-    def handle_response(self, caps_response):
-        """ Handle an CAPS_RESPONSE message.
+    def handle_response(self, response):
+        """ Handle an PT_SCAN_RESPONSE message.
 
         Args:
-            caps_response, a CAPS_RESPONSE message
+            caps_response, a PT_SCAN_RESPONSE message
 
         Returns:
             None
         """
 
-        addr = EtherAddress(caps_response.wtp)
+        # import pdb
+        # pdb.set_trace()
+
+        addr = EtherAddress(response.wtp)
 
         if addr not in RUNTIME.tenants[self.tenant_id].wtps:
             return
 
         wtp = RUNTIME.tenants[self.tenant_id].wtps[addr]
 
-        self.handle_callback(wtp)
+        lines = response.scan.decode().split('\n')
+        neighbors = []
+
+        for i in range(int(len(lines) / 5)):
+            addr = lines[i * 5 + 0]
+            ssid = lines[i * 5 + 1]
+            channel = lines[i * 5 + 2]
+            signal = lines[i * 5 + 3]
+            quality = lines[i * 5 + 4]
+            neighbor = Neighbor(addr, ssid, channel, signal, quality)
+            neighbors.append(neighbor)
+        # self.handle_callback(neighbors)
+        self.handle_callback(Neighbors(neighbors, wtp))
 
 
-class WTPDownWorker(ModuleLVAPPEventWorker):
+class ScanReceivedWorker(ModuleLVAPPEventWorker):
     """ Counter worker. """
 
     pass
 
 
-def wtpdown(**kwargs):
+def scanreceived(**kwargs):
     """Create a new module."""
+    # import pdb
+    # pdb.set_trace()
+    return RUNTIME.components[ScanReceivedWorker.__module__].add_module(**kwargs)
 
-    return RUNTIME.components[WTPDownWorker.__module__].add_module(**kwargs)
 
-
-def app_wtpdown(self, **kwargs):
+def app_scanreceived(self, **kwargs):
     """Create a new module (app version)."""
 
     kwargs['tenant_id'] = self.tenant_id
-    return wtpdown(**kwargs)
+    return scanreceived(**kwargs)
 
 
-setattr(EmpowerApp, WTPDown.MODULE_NAME, app_wtpdown)
+setattr(EmpowerApp, ScanReceived.MODULE_NAME, app_scanreceived)
 
 
 def launch():
     """Initialize the module."""
-
-    return WTPDownWorker(WTPDown, PT_BYE)
+    # import pdb
+    # pdb.set_trace()
+    return ScanReceivedWorker(ScanReceived, PT_SCAN_RESPONSE)

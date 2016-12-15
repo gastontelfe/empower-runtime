@@ -33,15 +33,12 @@ from empower.core.pnfpserver import BaseTenantPNFDevHandler
 from empower.core.pnfpserver import BasePNFDevHandler
 from empower.restserver.restserver import RESTServer
 from empower.core.pnfpserver import PNFPServer
-from empower.datatypes.etheraddress import EtherAddress
 from empower.lvapp.lvappconnection import LVAPPConnection
 from empower.persistence.persistence import TblWTP
 from empower.core.wtp import WTP
 
 from empower.lvapp import PT_TYPES
 from empower.lvapp import PT_TYPES_HANDLERS
-from empower.restserver.aclhandler import AllowHandler
-from empower.restserver.aclhandler import DenyHandler
 from empower.lvapp.lvaphandler import LVAPHandler
 from empower.lvapp.tenantlvaphandler import TenantLVAPHandler
 from empower.lvapp.tenantvaphandler import TenantVAPHandler
@@ -100,13 +97,6 @@ class LVAPPServer(PNFPServer, TCPServer):
         self.__assoc_id += 1
         return self.__assoc_id
 
-    def generate_bssid(self, base_mac, sta_mac):
-        """ Generate a new BSSID address. """
-
-        base = str(base_mac).split(":")[0:3]
-        sta = str(sta_mac).split(":")[3:6]
-        return EtherAddress(":".join(base + sta))
-
 
 def launch(port=DEFAULT_PORT):
     """Start LVAPP Server Module."""
@@ -116,8 +106,6 @@ def launch(port=DEFAULT_PORT):
     rest_server = RUNTIME.components[RESTServer.__module__]
     rest_server.add_handler_class(TenantWTPHandler, server)
     rest_server.add_handler_class(WTPHandler, server)
-    rest_server.add_handler_class(AllowHandler, server)
-    rest_server.add_handler_class(DenyHandler, server)
     rest_server.add_handler_class(LVAPHandler, server)
     rest_server.add_handler_class(TenantLVAPHandler, server)
     rest_server.add_handler_class(TenantVAPHandler, server)
